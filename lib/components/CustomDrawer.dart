@@ -4,6 +4,7 @@ import 'package:befab/Screens/CompetitionsProgressPage.dart';
 import 'package:befab/Screens/DashboardScreen.dart';
 import 'package:befab/Screens/GroupsScreen.dart';
 import 'package:befab/Screens/Nutrition.dart';
+import 'package:befab/Screens/SurveyScreen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_svg/flutter_svg.dart'; // Ensure this import is at the top
@@ -12,7 +13,16 @@ import 'package:flutter_svg/flutter_svg.dart'; // Ensure this import is at the t
 const Color selectedTileColor = Color.fromRGBO(134, 38, 51, 0.1);
 
 class CustomDrawer extends StatefulWidget {
-  const CustomDrawer({Key? key}) : super(key: key);
+  final String userName;
+  final String profileImage; // can also be network URL
+  final String? email;       // optional
+
+  CustomDrawer({
+    Key? key,
+    required this.userName,
+    required this.profileImage,
+    this.email,
+  }) : super(key: key);
 
   @override
   State<CustomDrawer> createState() => _CustomDrawerState();
@@ -53,6 +63,11 @@ final List<Map<String, dynamic>> menuItems = [
     'route': '/resources'
   },
   {
+    'title': 'Surveys',
+    'icon': 'assets/images/alert.svg',
+    'route': '/survey'
+  },
+  {
     'title': 'Settings',
     'icon': 'assets/images/settings.svg',
     'route': '/settings'
@@ -72,6 +87,8 @@ Widget? getTargetPage(String route) {
       return NutritionPage();
     case '/resources':
       return DashboardScreen();
+    case '/survey':
+      return Surveyscreen();
     case '/settings':
       return DashboardScreen();
     default:
@@ -96,14 +113,14 @@ Widget? getTargetPage(String route) {
                 children: [
                    CircleAvatar(
                     radius: 30,
-                    backgroundImage: AssetImage('assets/images/profile.jpg'),
+                    backgroundImage: NetworkImage(widget.profileImage),
                   ),
                   const SizedBox(width: 12),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'John Edward',
+                        widget.userName,
                         style: GoogleFonts.inter(
                           fontWeight: FontWeight.w500,
                           fontSize: 16,

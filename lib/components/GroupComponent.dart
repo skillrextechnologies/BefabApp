@@ -7,8 +7,11 @@ class GroupCard extends StatelessWidget {
   final String postedTime;
   final String membersCount;
   final String description;
-  final List<String> imageUrls;
+  final String imageUrls;
+  final String state;
+  final String groupId;
   final VoidCallback onJoinPressed;
+  final VoidCallback? onGroupTap; // 👈 one callback for all taps
 
   const GroupCard({
     super.key,
@@ -19,7 +22,10 @@ class GroupCard extends StatelessWidget {
     required this.membersCount,
     required this.description,
     required this.imageUrls,
+    required this.state,
+    required this.groupId,
     required this.onJoinPressed,
+    this.onGroupTap,
   });
 
   @override
@@ -34,43 +40,88 @@ class GroupCard extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              CircleAvatar(
-                radius: 28,
-                backgroundImage: AssetImage(groupImage),
+              /// 👇 Group Image clickable
+              GestureDetector(
+                onTap:
+                    onGroupTap ??
+                    () {
+                      Navigator.pushNamed(
+          context,
+          '/fitness-group',
+          arguments: {"id": groupId}, // 👈 send _id
+        );
+                    },
+                child: CircleAvatar(
+                  radius: 28,
+                  backgroundImage: NetworkImage(groupImage),
+                ),
               ),
               const SizedBox(width: 12),
+
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(groupName,
+                    /// 👇 Group Name clickable
+                    GestureDetector(
+                      onTap:
+                          onGroupTap ??
+                          () {
+                            Navigator.pushNamed(
+          context,
+          '/fitness-group',
+          arguments: {"id": groupId}, // 👈 send _id
+        );
+                          },
+                      child: Text(
+                        groupName,
                         style: const TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 16)),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: Colors.blue, // to hint it's clickable
+                        ),
+                      ),
+                    ),
                     const SizedBox(height: 4),
-                    Text(
-                      '$groupType · $postedTime\n$membersCount Members',
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+
+                    /// 👇 Group Type clickable (postedTime is not clickable)
+                    GestureDetector(
+                      onTap:
+                          onGroupTap ??
+                          () {
+                            Navigator.pushNamed(
+          context,
+          '/fitness-group',
+          arguments: {"id": groupId}, // 👈 send _id
+        );
+                          },
+                      child: Text(
+                        '$groupType · $postedTime\n$membersCount Members',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
                     ),
                   ],
                 ),
               ),
+
+              /// JOIN button
               TextButton(
-                
-  onPressed: () {
-    Navigator.pushNamed(context, '/fitness-group');
-  },
-  style: TextButton.styleFrom(
-    padding: EdgeInsets.symmetric(horizontal: 24),
-    backgroundColor: Colors.grey.shade200, // Light grey background
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(16),
-    ),
-  ),
-  child: const Text(
-    "JOIN",
-    style: TextStyle(color: Color(0xFF7121217),fontSize: 12),
-  ),
-),
+                onPressed: onJoinPressed,
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  backgroundColor: Colors.grey.shade200,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: Text(
+                  state,
+                  style: TextStyle(color: Color(0xFF121217), fontSize: 12),
+                ),
+              ),
             ],
           ),
         ),
@@ -84,53 +135,13 @@ class GroupCard extends StatelessWidget {
         const SizedBox(height: 12),
 
         /// Images Layout
-        if (imageUrls.length >= 4) ...[
-          // Row 1: Image 1 (50%) + Image 2 (25%) + Image 3 (25%)
-          Row(
-            children: [
-              Image.asset(
-                imageUrls[0],
-                width: screenWidth * 0.5,
-                height: 120,
-                fit: BoxFit.cover,
-              ),
-                        const SizedBox(width: 4),
+        Image.network(
+          imageUrls, // 👈 it's already a single string
+          width: screenWidth,
+          height: 240,
+          fit: BoxFit.cover,
+        ),
 
-              Image.asset(
-                imageUrls[1],
-                width: screenWidth * 0.23,
-                height: 120,
-                fit: BoxFit.cover,
-              ),
-          const SizedBox(width: 4),
-
-              Image.asset(
-                imageUrls[2],
-                width: screenWidth * 0.24,
-                height: 120,
-                fit: BoxFit.cover,
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-
-          // Row 2: Image 4 (50%) + empty space (50%)
-          Row(
-            children: [
-              Image.asset(
-                imageUrls[3],
-                width: screenWidth * 0.5,
-                height: 120,
-                fit: BoxFit.cover,
-              ),
-              Container(
-                width: screenWidth * 0.5,
-                height: 120,
-                color: Colors.transparent,
-              ),
-            ],
-          )
-        ],
         const SizedBox(height: 16),
       ],
     );

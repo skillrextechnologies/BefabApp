@@ -1,163 +1,168 @@
-import 'package:befab/components/CustomBottomNavBar.dart';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter_svg/flutter_svg.dart'; // Ensure this import is at the top
+import 'package:http/http.dart' as http;
 
-class AllNewslettersScreen extends StatelessWidget {
+final secureStorage = const FlutterSecureStorage();
+
+class AllNewslettersScreen extends StatefulWidget {
   const AllNewslettersScreen({super.key});
+
+  @override
+  State<AllNewslettersScreen> createState() => _AllNewslettersScreenState();
+}
+
+class _AllNewslettersScreenState extends State<AllNewslettersScreen> {
+  List<dynamic> newsletters = [];
+  bool loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchNewsletters();
+  }
+
+  Future<void> fetchNewsletters() async {
+    final url = "${dotenv.env['BACKEND_URL']}/app/newsletters";
+
+    try {
+      // read token from secure storage
+      final token = await secureStorage.read(key: "token");
+
+      final res = await http.get(
+        Uri.parse(url),
+        headers: {
+          "Content-Type": "application/json",
+          if (token != null) "Authorization": "Bearer $token",
+        },
+      );
+
+      if (res.statusCode == 200) {
+        setState(() {
+          newsletters = jsonDecode(res.body);
+          loading = false;
+        });
+      } else {
+        throw Exception("Failed to fetch (status: ${res.statusCode})");
+      }
+    } catch (e) {
+      print("Error fetching newsletters: $e");
+      setState(() => loading = false);
+    }
+  }
+
+  Future<void> writeSecureData(String key, String value) async {
+    await secureStorage.write(key: key, value: value);
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-          surfaceTintColor: Colors.transparent,  // Prevent M3 tint
+      appBar: AppBar(title: const Text("All Newsletter"), centerTitle: true),
+      body:
+          loading
+              ? const Center(child: CircularProgressIndicator())
+              : ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: newsletters.length,
+                itemBuilder: (context, index) {
+                  final n = newsletters[index];
+                  return GestureDetector(
+                    onTap: () async {
+                      await writeSecureData("newsletter_id", n["_id"]);
+                      Navigator.pushNamed(
+  context,
+  '/single-newsletter',
+  arguments: {'newsletterId': n["_id"]}, // <-- pass Map
+);
 
-        leadingWidth: 100,
-        leading: GestureDetector(
-          onTap: () {
-            Navigator.pop(context);
-          },
-          child: Row(
-            children: [
-              const SizedBox(width: 8),
-              Padding(
-                padding: const EdgeInsets.only(left: 8.0),
-                child: SvgPicture.asset(
-                  'assets/images/Arrow.svg',
-                  width: 14,
-                  height: 14,
-                ),
-              ),
-              const SizedBox(width: 6), // Minor gap between icon and text
-              Text(
-                'Back',
-                style: TextStyle(
-                  color: Color(0xFF862633),
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ),
-        centerTitle: true,
-        title: const Text(
-          'All Newsletter',
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: 16, // Same as Back text
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ),
+                    },
 
-      body: Stack(
-        children: [
-          SingleChildScrollView(
-            padding:  EdgeInsets.all(16),
-            child: Column(
-  children: List.generate(3, (index) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.pushNamed(context, '/single-newsletter');
-      },
-      child: Container(
-        margin: EdgeInsets.only(bottom: 16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: Image.asset(
-                'assets/images/news_banner${index + 1}.png',
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Headline',
-              style: GoogleFonts.inter(
-                fontSize: 22,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'One answer is that Truth pertains to the possibility that an event will occur. If true – it must occur and if false, it cannot occur...',
-              style: GoogleFonts.inter(
-                color: Color(0xFF9C9B9D),
-                fontSize: 16,
-                fontWeight: FontWeight.w400,
-              ),
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Published By:',
-                  style: GoogleFonts.inter(
-                    color: Color(0xFF000000),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.pushNamed(context, '/single-newsletter');
-                  },
-                  style: ElevatedButton.styleFrom(
-                    elevation: 0,
-                    backgroundColor: Colors.transparent,
-                    shadowColor: Colors.transparent,
-                    padding: EdgeInsets.zero,
-                  ),
-                  child: Chip(
-                    backgroundColor: const Color(0x1A862633),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(32),
-                    ),
-                    label: Text(
-                      'Read',
-                      style: GoogleFonts.inter(
-                        color: Color(0xFF862633),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w400,
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (n["picture"] != null && n["picture"].isNotEmpty)
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(16),
+                              child:
+                                  (n["picture"] != null &&
+                                          n["picture"].toString().isNotEmpty)
+                                      ? Image.network(
+                                        "${dotenv.env['BACKEND_URL']}${n["picture"]}",
+                                        fit: BoxFit.cover,
+                                        errorBuilder:
+                                            (_, __, ___) => const Icon(
+                                              Icons.image_not_supported,
+                                              size: 60,
+                                              color: Colors.grey,
+                                            ),
+                                      )
+                                      : const Icon(
+                                        Icons.image_not_supported,
+                                        size: 60,
+                                        color: Colors.grey,
+                                      ),
+                            ),
+
+                          const SizedBox(height: 16),
+                          Text(
+                            n["title"] ?? "No Title",
+                            style: GoogleFonts.inter(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            n["description"] ?? "",
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.inter(
+                              color: const Color(0xFF9C9B9D),
+                              fontSize: 16,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                "Published By: ${n["author"]?["username"] ?? "Unknown"}",
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w400,
+                                ),
+                              ),
+                              Chip(
+                                backgroundColor: const Color(0x1A862633),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(32),
+                                ),
+                                label: Text(
+                                  "Read",
+                                  style: GoogleFonts.inter(
+                                    color: const Color(0xFF862633),
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-                );
-              }),
-            ),
-          ),
-        ],
-      ),
-
-      floatingActionButton: SizedBox(
-        width: 70,
-        height: 70,
-        child: IconButton(
-          icon: const Icon(
-            Icons.add_circle,
-            size: 70,
-            color: Color(0xFF862633),
-          ),
-          onPressed: () {},
-        ),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: const CustomBottomNavBar(selectedIndex: 2),
+                  );
+                },
+              ),
     );
   }
 }
-

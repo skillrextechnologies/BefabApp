@@ -28,6 +28,7 @@ import 'package:befab/Screens/SingleNewsLetterScreen.dart';
 import 'package:befab/Screens/SingleVideoScreen.dart';
 import 'package:befab/Screens/SplashScreen.dart';
 import 'package:befab/Screens/SurveyScreen.dart';
+import 'package:befab/Screens/SurveyStartScreen.dart';
 import 'package:befab/Screens/VideoCategoriesScreen.dart';
 import 'package:befab/Screens/VitalsMeasurement.dart';
 import 'package:befab/Screens/WelcomeScreen.dart';
@@ -41,10 +42,13 @@ void main() async {
   await dotenv.load(fileName: ".env");
 
   // Ensure status bar is visible and styled
-  SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent, // Make it transparent or set a color
-    statusBarIconBrightness: Brightness.dark, // Use `Brightness.light` for light icons
-  ));
+  SystemChrome.setSystemUIOverlayStyle(
+    SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent, // Make it transparent or set a color
+      statusBarIconBrightness:
+          Brightness.dark, // Use `Brightness.light` for light icons
+    ),
+  );
 
   runApp(MyApp());
 }
@@ -58,37 +62,61 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'BeFAB HBCU',
       theme: ThemeData(
-            scaffoldBackgroundColor: Colors.white, // Sets background for all screens
+        scaffoldBackgroundColor:
+            Colors.white, // Sets background for all screens
         primaryColor: const Color(0xFF862633),
         fontFamily: 'Helvetica',
       ),
       // Use routes directly
       initialRoute: '/',
       routes: {
-        '/': (context) =>  SplashScreen(),
+        '/': (context) => SplashScreen(),
         '/welcome': (context) => WelcomeScreen(),
-        '/signup': (context) =>  SignUpScreen(),
-        '/signin': (context) =>  SignInScreen(),
-        '/forgot-password-1': (context) =>  ForgotPassword1(),
-        '/forgot-password-2': (context) =>  ForgotPassword2(),
-        '/forgot-password-3': (context) =>  ForgotPassword3(),
-        '/forgot-password-4': (context) =>  ForgotPassword4(),
-        '/newsletter': (context) =>  NewsletterScreen(),
-        '/dashboard': (context) =>  DashboardScreen(),
-        '/single-newsletter': (context) =>  SingleNewsletterScreen(),
+        '/signup': (context) => SignUpScreen(),
+        '/signin': (context) => SignInScreen(),
+        '/forgot-password-1': (context) => ForgotPassword1(),
+        '/forgot-password-2': (context) => ForgotPassword2(),
+        '/forgot-password-3': (context) => ForgotPassword3(),
+        '/forgot-password-4': (context) => ForgotPassword4(),
+        '/newsletter': (context) => NewsletterScreen(),
+        '/dashboard': (context) => DashboardScreen(),
+        '/single-newsletter': (context) {
+          final args =
+              ModalRoute.of(context)!.settings.arguments
+                  as Map<String, dynamic>?;
+          final newsletterId = args?['newsletterId'];
+
+          return SingleNewsletterScreen(newsletterId: newsletterId);
+        },
+
         '/all-newsletters': (context) => AllNewslettersScreen(),
         '/video-categories': (context) => VideoCategoriesScreen(),
         '/single-video': (context) => SingleVideoScreen(),
         '/message': (context) => MessagesPage(),
-        '/chat-screen': (_) => ChatScreen(),
+        '/chat-screen': (context) {
+          final args =
+              ModalRoute.of(context)!.settings.arguments
+                  as Map<String, dynamic>?;
+          final chatId = args?['chatId'];
+
+          return ChatScreen(chatId: chatId, userId: args?['chatId'],);
+        },
         '/groups': (context) => GroupsPage(),
         '/fitness-group': (_) => FitnessGroupPage(),
-        '/fitness-page': (context) =>  FitnessGroupPage(),
+        '/fitness-page': (context) => FitnessGroupPage(),
         '/competitions-progress': (_) => CompetitionsProgressPage(),
         '/competitions-list': (_) => CompetitionsListPage(),
         '/calendar': (_) => CalendarPage(),
         '/new-goal': (_) => NewGoalPage(),
         '/survey': (_) => Surveyscreen(),
+        '/survey-start': (context) {
+          final args =
+              ModalRoute.of(context)!.settings.arguments
+                  as Map<String, dynamic>?;
+          final surveyId = args?['surveyId'];
+
+          return SurveyStartScreen(surveyId: surveyId);
+        },
         '/nutrition': (_) => NutritionPage(),
         '/meal-logging': (_) => MealLogging(),
         '/add-meal2': (_) => AddMeal2(),
@@ -100,8 +128,7 @@ class MyApp extends StatelessWidget {
         '/activity-fitness': (_) => ActivityFitness(),
         '/vitals-measurement': (_) => VitalsMeasurement(),
         '/body-composition': (_) => BodyCompositionScreen(),
-
-            },
+      },
     );
   }
 }

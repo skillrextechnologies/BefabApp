@@ -1,147 +1,229 @@
+import 'dart:convert';
 import 'package:befab/components/CustomBottomNavBar.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart'; // Ensure this import is included
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 
-class CalendarPage extends StatelessWidget {
-  final List<Map<String, String>> tasks = [
-    {"title": "Dev Team Meeting", "time": "10:00 - 11:00", "color": "red"},
-    {"title": "SEO Workshop", "time": "11:00 - 12:00", "color": "blue"},
-    {"title": "Design Meeting", "time": "01:00 - 02:00", "color": "orange"},
-    {"title": "Lunch Break", "time": "12:00 - 01:00", "color": "grey"},
-  ];
+// Secure storage instance
+final secureStorage = const FlutterSecureStorage();
 
-  Color getColorFromString(String colorName) {
-    switch (colorName.toLowerCase()) {
-      case 'red':
-        return Color(0xFF862633);
-      case 'blue':
-        return Color(0xFF0074C4);
-      case 'orange':
-        return Color(0xFFE73C1A);
-      case 'grey':
-        return Color(0xFFF8F5F5);
+class CalendarPage extends StatefulWidget {
+  const CalendarPage({super.key});
+
+  @override
+  State<CalendarPage> createState() => _CalendarPageState();
+}
+
+class _CalendarPageState extends State<CalendarPage> {
+  List<Map<String, dynamic>> events = [];
+  DateTime _selectedDate = DateTime.now();
+
+  // Fetch events from backend
+  Future<void> fetchEvents() async {
+    try {
+      final token = await secureStorage.read(key: 'token');
+      final url = "${dotenv.env['BACKEND_URL']}/app/events";
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final List data = json.decode(response.body);
+        setState(() {
+          events = data.map((e) => e as Map<String, dynamic>).toList();
+        });
+      } else {
+        debugPrint("Error fetching events: ${response.statusCode}");
+        debugPrint("Response: ${response.body}");
+      }
+    } catch (e) {
+      debugPrint("Exception: $e");
+    }
+  }
+
+  // Map event color based on status
+  Color getColorFromStatus(String status) {
+    switch (status.toLowerCase()) {
+      case 'upcoming':
+        return const Color(0xFF0074C4); // blue
+      case 'active':
+        return const Color(0xFFE73C1A); // orange
+      case 'completed':
+        return const Color(0xFF862633); // red
       default:
-        return Colors.black;
+        return Colors.grey;
+    }
+  }
+
+  // Format date for Google Calendar
+  String _formatGoogleDate(DateTime date) {
+    return date.toUtc().toIso8601String()
+        .replaceAll("-", "")
+        .replaceAll(":", "")
+        .split(".")[0] + "Z";
+  }
+
+  // Open Google Calendar with event details
+  Future<void> openInGoogleCalendar(Map<String, dynamic> event) async {
+    final startDate = DateTime.parse(event['date']);
+    final endDate = startDate.add(const Duration(hours: 1));
+
+    final start = _formatGoogleDate(startDate);
+    final end = _formatGoogleDate(endDate);
+
+    final title = Uri.encodeComponent(event['title'] ?? "Event");
+    final details = Uri.encodeComponent(
+      "Status: ${event['status']}\n"
+      "Author: ${event['author']?['firstName'] ?? ''} ${event['author']?['lastName'] ?? ''}\n"
+      "Created: ${event['createdAt'] ?? ''}"
+    );
+    final location = Uri.encodeComponent(event['location'] ?? "");
+
+    final url =
+        "https://www.google.com/calendar/render?action=TEMPLATE&text=$title&details=$details&location=$location&dates=$start/$end";
+
+    final uri = Uri.parse(url);
+
+    // ✅ FIXED: url_launcher new API
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      debugPrint("Could not launch Google Calendar");
     }
   }
 
   @override
+  void initState() {
+    super.initState();
+    fetchEvents(); // Fetch events on page load
+  }
+
+  @override
   Widget build(BuildContext context) {
+    // Filter events for selected date
+    final dailyEvents = events.where((event) {
+      if (event['date'] == null) return false;
+      final eventDate = DateTime.parse(event['date']).toLocal();
+      return eventDate.year == _selectedDate.year &&
+          eventDate.month == _selectedDate.month &&
+          eventDate.day == _selectedDate.day;
+    }).toList();
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
-          surfaceTintColor: Colors.transparent,  // Prevent M3 tint
-
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
         leadingWidth: 100,
         leading: GestureDetector(
-          onTap: () {
-            Navigator.pop(context);
-          },
+          onTap: () => Navigator.pop(context),
           child: Row(
-            children: [
-              const SizedBox(width: 8),
+            children: const [
+              SizedBox(width: 8),
               Padding(
-                padding: const EdgeInsets.only(left: 8.0),
-                child: Icon(
-                  Icons.arrow_back,
-                  color: Colors.black,
-                  size: 18,
-                ),
+                padding: EdgeInsets.only(left: 8.0),
+                child: Icon(Icons.arrow_back, color: Colors.black, size: 18),
               ),
             ],
           ),
         ),
         centerTitle: true,
-        title: const Text('Calendar', style: TextStyle(color: Colors.black, fontSize: 16)),
+        title: const Text('Calendar',
+            style: TextStyle(color: Colors.black, fontSize: 16)),
         actions: [
           IconButton(
             icon: SvgPicture.asset(
               'assets/images/settings2.svg',
               width: 18,
               height: 18,
-              color: const Color(0xFF862633),
+              color: Color(0xFF862633),
             ),
-            onPressed: () {
-              // Handle settings tap
-            },
+            onPressed: () {},
           ),
         ],
       ),
+
       body: SingleChildScrollView(
         child: Column(
           children: [
+            // Calendar widget
             Theme(
-  data: Theme.of(context).copyWith(
-    colorScheme: ColorScheme.light(
-      primary: Color(0xFF862633), // <-- Selected date circle & header color
-      onPrimary: Colors.white, // <-- Text color on selected date
-      onSurface: Colors.black, // <-- Default text color
-    ),
-  ),
-  child: CalendarDatePicker(
-    initialDate: DateTime.now(),
-    firstDate: DateTime(2022),
-    lastDate: DateTime(2026),
-    onDateChanged: (value) {
-      // Handle selected date
-    },
-  ),
-),
-
-            Align(
-              alignment: Alignment.topLeft,
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Text("Daily Tasks", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              data: Theme.of(context).copyWith(
+                colorScheme: const ColorScheme.light(
+                  primary: Color(0xFF862633),
+                  onPrimary: Colors.white,
+                  onSurface: Colors.black,
+                ),
+              ),
+              child: CalendarDatePicker(
+                initialDate: _selectedDate,
+                firstDate: DateTime(2022),
+                lastDate: DateTime(2026),
+                onDateChanged: (value) {
+                  setState(() {
+                    _selectedDate = value; // update selected date
+                  });
+                },
               ),
             ),
 
-            ...List.generate(tasks.length, (index) {
-              if (index == 1) {
-                final nextTask = index + 1 < tasks.length ? tasks[index + 1] : null;
-                return Row(
-                  children: [
-                    Expanded(child: buildTaskContainer(tasks[index], getColorFromString)),
-                    const SizedBox(width: 8),
-                    if (nextTask != null)
-                      Expanded(child: buildTaskContainer(nextTask, getColorFromString)),
-                  ],
+            const Align(
+              alignment: Alignment.topLeft,
+              child: Padding(
+                padding: EdgeInsets.all(8.0),
+                child: Text(
+                  "Daily Tasks",
+                  style: TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+
+            if (dailyEvents.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Text("No events for this day."),
+              )
+            else
+              ...dailyEvents.map((event) {
+                final color = getColorFromStatus(event['status'] ?? 'grey');
+                return GestureDetector(
+                  onTap: () => openInGoogleCalendar(event),
+                  child: buildEventContainer(event, color),
                 );
-              }
+              }).toList(),
 
-              if (index == 2) return const SizedBox.shrink();
-
-              return buildTaskContainer(tasks[index], getColorFromString);
-            }),
             const SizedBox(height: 24),
-            
           ],
         ),
       ),
+
       floatingActionButton: SizedBox(
         width: 70,
         height: 70,
         child: IconButton(
-          icon: const Icon(
-            Icons.add_circle,
-            size: 70,
-            color: Color(0xFF862633),
-          ),
-          onPressed: (){},
+          icon: const Icon(Icons.add_circle,
+              size: 70, color: Color(0xFF862633)),
+          onPressed: () {},
         ),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButtonLocation:
+          FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: const CustomBottomNavBar(selectedIndex: 1),
     );
   }
 }
 
-Widget buildTaskContainer(Map<String, String> task, Color Function(String) getColorFromString) {
-  final bgColor = getColorFromString(task['color']!);
-  final isGrey = task['color'] == 'grey';
-  final textColor = isGrey ? Colors.black : Colors.white;
-
+// Build individual event container
+Widget buildEventContainer(Map<String, dynamic> event, Color bgColor) {
   return Container(
     margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
     decoration: BoxDecoration(
@@ -152,31 +234,16 @@ Widget buildTaskContainer(Map<String, String> task, Color Function(String) getCo
       padding: const EdgeInsets.all(8.0),
       child: ListTile(
         title: Text(
-          task['title']!,
-          style: TextStyle(color: textColor,
-          fontSize: 14),
+          event['title'] ?? '',
+          style: const TextStyle(color: Colors.white, fontSize: 14),
         ),
         subtitle: Text(
-          task['time']!,
-          style: TextStyle(color: textColor,fontSize: 12),
+          event['date'] != null
+              ? DateTime.parse(event['date']).toLocal().toString().split(' ')[0]
+              : '',
+          style: const TextStyle(color: Colors.white, fontSize: 12),
         ),
       ),
     ),
-  );
-}
-
-BottomNavigationBar buildBottomNavBar(int selectedIndex, Function(int) onTap) {
-  return BottomNavigationBar(
-    currentIndex: selectedIndex,
-    selectedItemColor: const Color(0xFF862633),
-    unselectedItemColor: Colors.grey,
-    type: BottomNavigationBarType.fixed,
-    items: const [
-      BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-      BottomNavigationBarItem(icon: Icon(Icons.favorite), label: 'Health'),
-      BottomNavigationBarItem(icon: SizedBox.shrink(), label: ''), // Spacer for FAB
-      BottomNavigationBarItem(icon: Icon(Icons.video_collection), label: 'Video'),
-      BottomNavigationBarItem(icon: Icon(Icons.message), label: 'Message'),
-    ],
   );
 }

@@ -1,24 +1,71 @@
-import 'package:befab/components/CustomBottomNavBar.dart';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter_svg/flutter_svg.dart'; // Ensure this import is at the top
+import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-class SingleNewsletterScreen extends StatelessWidget {
-  const SingleNewsletterScreen({super.key});
+final secureStorage = const FlutterSecureStorage();
+
+class SingleNewsletterScreen extends StatefulWidget {
+  final String newsletterId;
+  const SingleNewsletterScreen({super.key, required this.newsletterId});
+
+  @override
+  State<SingleNewsletterScreen> createState() => _SingleNewsletterScreenState();
+}
+
+class _SingleNewsletterScreenState extends State<SingleNewsletterScreen> {
+  Map<String, dynamic>? newsletter;
+  bool loading = true;
+
+  Future<void> fetchNewsletter() async {
+    try {
+      final token = await secureStorage.read(key: "token");
+      final id = await secureStorage.read(key: "newsletter_id");
+      final res = await http.get(
+        Uri.parse("${dotenv.env['BACKEND_URL']}/app/newsletters/${id}"),
+        headers: {"Authorization": "Bearer $token"},
+      );
+      if (res.statusCode == 200) {
+        setState(() {
+          newsletter = jsonDecode(res.body);
+          loading = false;
+        });
+      } else {
+        throw Exception("Failed to fetch single newsletter");
+      }
+    } catch (e) {
+      print("Error fetching single newsletter: $e");
+      setState(() => loading = false);
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    fetchNewsletter();
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (loading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    if (newsletter == null) {
+      return const Scaffold(body: Center(child: Text("Not found")));
+    }
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-          surfaceTintColor: Colors.transparent,  // Prevent M3 tint
-
+        surfaceTintColor: Colors.transparent,
         leadingWidth: 100,
         leading: GestureDetector(
-          onTap: () {
-            Navigator.pop(context);
-          },
+          onTap: () => Navigator.pop(context),
           child: Row(
             children: [
               const SizedBox(width: 8),
@@ -30,8 +77,8 @@ class SingleNewsletterScreen extends StatelessWidget {
                   height: 14,
                 ),
               ),
-              const SizedBox(width: 6), // Minor gap between icon and text
-              Text(
+              const SizedBox(width: 6),
+              const Text(
                 'Back',
                 style: TextStyle(
                   color: Color(0xFF862633),
@@ -47,55 +94,54 @@ class SingleNewsletterScreen extends StatelessWidget {
           'Newsletter',
           style: TextStyle(
             color: Colors.black,
-            fontSize: 16, // Same as Back text
+            fontSize: 16,
             fontWeight: FontWeight.w500,
           ),
         ),
       ),
-
-      body: Stack(
-        children: [
-          SingleChildScrollView(
-            padding:  EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: Image.asset('assets/images/news_banner1.png'),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (newsletter?["picture"] != null)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Image.network(
+                  "${dotenv.env['BACKEND_URL']}${newsletter!["picture"]}",
+                  fit: BoxFit.cover,
+                  errorBuilder:
+                      (_, __, ___) => const Icon(Icons.image_not_supported),
                 ),
-                const SizedBox(height: 16),
-                Text(
-                  'Headline',
-                  style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 8),
-                 Text('PUBLISHED ON: 23RD AUG, 2024',style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w400),),
-                const SizedBox(height: 12),
-                 Text(
-                  'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum',
-                  style: GoogleFonts.inter(color: Color(0xFF9C9B9D),fontSize: 16,fontWeight: FontWeight.w400),
-                ),
-              ],
+              ),
+            const SizedBox(height: 16),
+            Text(
+              newsletter?["title"] ?? "Headline",
+              style: GoogleFonts.inter(
+                fontSize: 22,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-          ),
-        ],
-      ),
-      floatingActionButton: SizedBox(
-        width: 70,
-        height: 70,
-        child: IconButton(
-          icon: const Icon(
-            Icons.add_circle,
-            size: 70,
-            color: Color(0xFF862633),
-          ),
-          onPressed: () {},
+            const SizedBox(height: 8),
+            Text(
+              "PUBLISHED ON: ${DateTime.parse(newsletter?["createdAt"]).toLocal().toString().split(' ')[0]}",
+              style: GoogleFonts.inter(
+                fontSize: 15,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              newsletter?["description"] ?? "",
+              style: GoogleFonts.inter(
+                color: const Color(0xFF9C9B9D),
+                fontSize: 16,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+          ],
         ),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: const CustomBottomNavBar(selectedIndex: 2),
     );
   }
 }
-
