@@ -11,9 +11,9 @@ class VideoCategoriesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.white,         // Solid white
-  elevation: 0,                          // No shadow
-  surfaceTintColor: Colors.transparent,  // Prevent M3 tint
+        backgroundColor: Colors.white, // Solid white
+        elevation: 0, // No shadow
+        surfaceTintColor: Colors.transparent, // Prevent M3 tint
         leadingWidth: 100,
         leading: GestureDetector(
           onTap: () {
@@ -54,93 +54,99 @@ class VideoCategoriesScreen extends StatelessWidget {
       ),
 
       body: Stack(
-  children: [
-    Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ToggleButtonsRow(),
-        Expanded(
-  child: GridView.count(
-    crossAxisCount: 2,
-    childAspectRatio: 0.55,
-    padding: const EdgeInsets.all(16),
-    children: List.generate(
-      4,
-      (index) => GestureDetector(
-        onTap: () {
-        Navigator.pushNamed(context, '/single-video');
-      },
-        child: Container(
-          margin: const EdgeInsets.all(4), // Optional spacing
-          child: Column(
+        children: [
+          Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ClipRRect(
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(12),
-                  topRight: Radius.circular(12),
-                ),
-                child: SizedBox(
-                  height: 220,
-                  width: double.infinity,
-                  child: Image.asset(
-                    'assets/images/video_thumb${index + 1}.png',
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 3),
-               Text(
-                'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.inter(fontSize: 14,fontWeight: FontWeight.w400
-                ),
-              ),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  const CircleAvatar(
-                    radius: 14,
-                    backgroundImage: AssetImage(
-                      'assets/images/profile2.jpg',
+              ToggleButtonsRow(),
+              Expanded(
+                child: GridView.count(
+                  crossAxisCount: 2,
+                  childAspectRatio: 0.55,
+                  padding: const EdgeInsets.all(16),
+                  children: List.generate(
+                    4,
+                    (index) => GestureDetector(
+                      onTap: () {
+                        Navigator.pushNamed(context, '/single-video');
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.all(4), // Optional spacing
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            ClipRRect(
+                              borderRadius: const BorderRadius.only(
+                                topLeft: Radius.circular(12),
+                                topRight: Radius.circular(12),
+                              ),
+                              child: SizedBox(
+                                height: 220,
+                                width: double.infinity,
+                                child: Image.asset(
+                                  'assets/images/video_thumb${index + 1}.png',
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                const CircleAvatar(
+                                  radius: 14,
+                                  backgroundImage: AssetImage(
+                                    'assets/images/profile2.jpg',
+                                  ),
+                                ),
+                                const SizedBox(width: 3),
+                                Text(
+                                  'Samantha',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                                ),
+                                const Spacer(),
+                                SvgPicture.asset(
+                                  'assets/images/like.svg',
+                                  width: 16,
+                                  height: 16,
+                                ),
+                                const SizedBox(width: 3),
+
+                                Padding(
+                                  padding: const EdgeInsets.only(right: 4.0),
+                                  child: const Text(
+                                    '220',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w400,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 3),
-                   Text(
-                    'Samantha',
-                    style: GoogleFonts.inter(fontSize: 12,fontWeight: FontWeight.w400),
-                  ),
-                  const Spacer(),
-                  SvgPicture.asset(
-                    'assets/images/like.svg',
-                    width: 16,
-                    height: 16,
-                  ),
-                  const SizedBox(width: 3),
-        
-                  Padding(
-                    padding: const EdgeInsets.only(right: 4.0),
-                    child: const Text(
-                      '220',
-                      style: TextStyle(fontSize: 13,fontWeight: FontWeight.w400),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ],
           ),
-        ),
+        ],
       ),
-    ),
-  ),
-)
-
-      ],
-    ),
-  ],
-)
-,
       floatingActionButton: SizedBox(
         width: 70,
         height: 70,
@@ -150,7 +156,9 @@ class VideoCategoriesScreen extends StatelessWidget {
             size: 70,
             color: Color(0xFF862633),
           ),
-          onPressed: () {},
+          onPressed: () {
+            Navigator.pushNamed(context, "/all-reels");
+          },
         ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
@@ -158,7 +166,6 @@ class VideoCategoriesScreen extends StatelessWidget {
     );
   }
 }
-
 
 class ToggleButtonsRow extends StatefulWidget {
   const ToggleButtonsRow({super.key});

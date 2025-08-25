@@ -3,6 +3,7 @@ import 'package:befab/Screens/ActivityFitness.dart';
 import 'package:befab/Screens/AddMeal.dart';
 import 'package:befab/Screens/AddMeal2.dart';
 import 'package:befab/Screens/AllNewsLetterScreen.dart';
+import 'package:befab/Screens/AllReels.dart';
 import 'package:befab/Screens/BodyCompositionScreen.dart';
 import 'package:befab/Screens/ChatScreen.dart';
 import 'package:befab/Screens/CompetitionsActiveCompetitions.dart';
@@ -21,10 +22,12 @@ import 'package:befab/Screens/NewGoalEntryForm.dart';
 import 'package:befab/Screens/NewsLetterScreen.dart';
 import 'package:befab/Screens/Nutrition.dart';
 import 'package:befab/Screens/Nutrition2.dart';
+import 'package:befab/Screens/Reel.dart';
 import 'package:befab/Screens/SearchFood.dart';
 import 'package:befab/Screens/SignInScreen.dart';
 import 'package:befab/Screens/SignUpScreen.dart';
 import 'package:befab/Screens/SingleNewsLetterScreen.dart';
+import 'package:befab/Screens/SingleReel.dart';
 import 'package:befab/Screens/SingleVideoScreen.dart';
 import 'package:befab/Screens/SplashScreen.dart';
 import 'package:befab/Screens/SurveyScreen.dart';
@@ -92,6 +95,9 @@ class MyApp extends StatelessWidget {
         '/all-newsletters': (context) => AllNewslettersScreen(),
         '/video-categories': (context) => VideoCategoriesScreen(),
         '/single-video': (context) => SingleVideoScreen(),
+        '/all-reels': (context) => AllReels(),
+        '/single-reel': (context) =>SingleReel(),
+        '/reel': (context) => Reel(),
         '/message': (context) => MessagesPage(),
         '/chat-screen': (context) {
           final args =
@@ -99,7 +105,7 @@ class MyApp extends StatelessWidget {
                   as Map<String, dynamic>?;
           final chatId = args?['chatId'];
 
-          return ChatScreen(chatId: chatId, userId: args?['chatId'],);
+          return ChatScreen(chatId: chatId, userId: args?['userId'],);
         },
         '/groups': (context) => GroupsPage(),
         '/fitness-group': (_) => FitnessGroupPage(),
