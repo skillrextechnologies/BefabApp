@@ -23,8 +23,9 @@ class WeeklyActivityChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Find max values for normalization
-    final maxSteps = stepsData.reduce((a, b) => a > b ? a : b);
-    final maxCalories = caloriesData.reduce((a, b) => a > b ? a : b);
+    final maxSteps = stepsData.isNotEmpty ? stepsData.reduce((a, b) => a > b ? a : b) : 1;
+final maxCalories = caloriesData.isNotEmpty ? caloriesData.reduce((a, b) => a > b ? a : b) : 1;
+
     
     return Padding(
       padding: const EdgeInsets.all(8.0),
@@ -112,8 +113,11 @@ class WeeklyActivityChart extends StatelessWidget {
   }
   
   Widget _buildDayColumn(String day, int steps, int calories, int maxSteps, int maxCalories) {
-  final stepsHeight = (steps / maxSteps) * (chartHeight - 40);
-  final caloriesHeight = (calories / maxCalories) * (chartHeight - 40);
+  final safeMaxSteps = maxSteps > 0 ? maxSteps : 1;
+final safeMaxCalories = maxCalories > 0 ? maxCalories : 1;
+
+final stepsHeight = (steps / safeMaxSteps) * (chartHeight - 40);
+final caloriesHeight = (calories / safeMaxCalories) * (chartHeight - 40);
 
   return Column(
     mainAxisAlignment: MainAxisAlignment.end,

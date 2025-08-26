@@ -61,6 +61,11 @@ class ImageTextGridItemCards extends StatelessWidget {
                         style: const TextStyle(fontSize: 16,fontWeight: FontWeight.w500),
                         textAlign: TextAlign.center,
                       ),
+                      Text(
+                        item['a'] ?? '',
+                        style: const TextStyle(fontSize: 12,fontWeight: FontWeight.w500),
+                        textAlign: TextAlign.center,
+                      ),
                     ],
                   ),
                 ),

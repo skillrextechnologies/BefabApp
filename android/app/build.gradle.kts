@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.example.befab"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 35
     ndkVersion = "27.0.12077973" // <- override here
 
     compileOptions {
@@ -21,8 +21,8 @@ android {
 
     defaultConfig {
         applicationId = "com.example.befab"
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        minSdk = 26
+        targetSdk = 35
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }

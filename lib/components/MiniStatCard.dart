@@ -22,8 +22,15 @@ class MiniHealthStat {
 }
 
 class MiniStatsGrid extends StatelessWidget {
-  MiniStatsGrid({super.key});
+  final Map<String, dynamic> stats;
+  const MiniStatsGrid({
+    super.key,
+    required this.stats,
+  });
 
+
+  @override
+  Widget build(BuildContext context) {
   final List<MiniHealthStat> miniStats = [
     MiniHealthStat(
       image: "assets/images/heartbeat.svg",
@@ -31,8 +38,8 @@ class MiniStatsGrid extends StatelessWidget {
       imageBgColor: const Color.fromRGBO(134, 38, 51, 0.2),      
       backgroundColor: Color.fromRGBO(134, 38, 51, 0.05),
       label: 'Heart Rate',
-      value: '72',
-      unit: 'bpm',
+      value: stats['h']?['data'] ?? '--',
+      unit: stats['h']?['unit'] ?? '--',
     ),
     MiniHealthStat(
       image: "assets/images/steps.svg",
@@ -40,7 +47,7 @@ class MiniStatsGrid extends StatelessWidget {
       imageBgColor: const Color.fromRGBO(37, 99, 235, 0.2),
       backgroundColor: Color.fromRGBO(37, 99, 235, 0.06),
       label: 'Steps',
-      value: '8,563',
+      value: stats['s']?['data'] ?? '--',
       unit: '',
     ),
     MiniHealthStat(
@@ -49,7 +56,7 @@ class MiniStatsGrid extends StatelessWidget {
       imageBgColor: const Color.fromRGBO(22, 163, 74, 0.2),
       backgroundColor: Color.fromRGBO(22, 163, 74, 0.05),
       label: 'Calories',
-      value: '1245',
+      value: stats['calories']?['data'] ?? '--',
       unit: '',
     ),
     MiniHealthStat(
@@ -58,13 +65,10 @@ class MiniStatsGrid extends StatelessWidget {
       imageBgColor: const Color.fromRGBO(147, 51, 234, 0.2),
       backgroundColor: Color.fromRGBO(147, 51, 234, 0.06),
       label: 'Sleep',
-      value: '72h 20m',
-      unit: '',
+      value: stats['sleep']?['data'] ?? '--',
+      unit: stats['sleep']?['unit'] ?? '--',
     ),
   ];
-
-  @override
-  Widget build(BuildContext context) {
     return GridView.count(
       crossAxisCount: 2,
       crossAxisSpacing: 8,

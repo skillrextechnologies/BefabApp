@@ -1,11 +1,15 @@
-// reel_screen.dart
 import 'dart:io';
 import 'package:befab/components/CustomBottomNavBar.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:video_player/video_player.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
+import 'package:path/path.dart' as path;
+import 'dart:convert';
 
 class Reel extends StatefulWidget {
   const Reel({super.key});
@@ -16,12 +20,13 @@ class Reel extends StatefulWidget {
 
 class _ReelState extends State<Reel> {
   VideoPlayerController? _controller;
-  String? _category;
+  String? _category; // this will be your "type"
   String? _videoPath;
   String? _coverImagePath;
   final TextEditingController _captionController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
   bool _isPlaying = false;
+  bool _isUploading = false;
 
   @override
   void didChangeDependencies() {
@@ -65,6 +70,82 @@ class _ReelState extends State<Reel> {
     });
   }
 
+  final storage = const FlutterSecureStorage();
+
+Future<void> _submitReel() async {
+  if (_videoPath == null) return;
+
+  setState(() {
+    _isUploading = true;
+  });
+
+  try {
+    // Get API base URL from .env
+    final baseUrl = dotenv.env['BACKEND_URL'] ?? "";
+    final uri = Uri.parse("$baseUrl/app/videos");
+
+    // Get token from secure storage
+    final token = await storage.read(key: "token") ?? "";
+
+    final request = http.MultipartRequest("POST", uri);
+
+    request.headers['Authorization'] = 'Bearer $token';
+
+    // Video file
+    request.files.add(await http.MultipartFile.fromPath(
+      'url',
+      _videoPath!,
+      filename: path.basename(_videoPath!),
+    ));
+
+    // Thumbnail (optional)
+    if (_coverImagePath != null) {
+      request.files.add(await http.MultipartFile.fromPath(
+        'thumbnailUrl',
+        _coverImagePath!,
+        filename: path.basename(_coverImagePath!),
+      ));
+    }
+
+    // Duration
+    final durationSec = _controller?.value.duration.inSeconds ?? 0;
+
+    // Other fields
+    request.fields['title'] = _captionController.text.isNotEmpty
+        ? _captionController.text
+        : "Untitled";
+    request.fields['caption'] = _captionController.text;
+    request.fields['category'] = ""; // category is empty
+    request.fields['type'] = _category ?? "reel"; // comes from previous screen
+    request.fields['durationSec'] = durationSec.toString();
+
+    final response = await request.send();
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final respStr = await response.stream.bytesToString();
+      final data = json.decode(respStr);
+      print("Upload success: $data");
+
+      if (mounted) {
+        Navigator.pushNamed(context, '/single-reel', arguments: {
+          'videoPath': _videoPath,
+          'category': _category,
+          'caption': _captionController.text,
+          'location': _locationController.text,
+          'coverImagePath': _coverImagePath,
+        });
+      }
+    } else {
+      print("Upload failed: ${response.statusCode}");
+    }
+  } catch (e) {
+    print("Error uploading video: $e");
+  } finally {
+    setState(() {
+      _isUploading = false;
+    });
+  }
+}
   @override
   void dispose() {
     _controller?.dispose();
@@ -235,30 +316,22 @@ class _ReelState extends State<Reel> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  onPressed: () {
-                    Navigator.pushNamed(
-                      context,
-                      '/single-reel',
-                      arguments: {
-                        'videoPath': _videoPath,
-                        'category': _category,
-                        'caption': _captionController.text,
-                        'location': _locationController.text,
-                        'coverImagePath': _coverImagePath,
-                      },
-                    );
-                  },
+                  onPressed: _isUploading ? null : _submitReel,
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 32, vertical: 12),
-                    child: Text(
-                      'Post',
-                      style: GoogleFonts.lexend(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16,
-                      ),
-                    ),
+                    child: _isUploading
+                        ? const CircularProgressIndicator(
+                            color: Colors.white,
+                          )
+                        : Text(
+                            'Post',
+                            style: GoogleFonts.lexend(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                            ),
+                          ),
                   ),
                 ),
               ),

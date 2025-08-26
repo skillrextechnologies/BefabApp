@@ -5,6 +5,7 @@ import 'package:befab/components/CustomAppHeader.dart';
 import 'package:befab/components/CustomBottomNavBar.dart';
 import 'package:befab/components/HealthMetricsListWidget.dart';
 import 'package:befab/components/HeartRateWidget.dart';
+import 'package:befab/services/health_service.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_svg/flutter_svg.dart'; // Ensure this import is at the top
 
@@ -16,48 +17,212 @@ class VitalsMeasurement extends StatefulWidget {
 }
 
 class _VitalsMeasurementState extends State<VitalsMeasurement> {
-  final List<HealthMetric> sampleMetrics = [
-      HealthMetric(
-        image: "assets/images/heartbeat.svg",
-        iconColor: const Color(0xFF862633),
-        iconBackgroundColor: const Color.fromRGBO(134, 38, 51, 0.2),
-        title: 'Heart Rate',
-        timestamp: 'Today 10:23 Am',
-        value: '72',
-        unit: 'bpm',
-        onTap: () => print('Heart Rate tapped'),
-      ),
-      HealthMetric(
-        image: "assets/images/ic5.svg",
-        iconColor: const Color(0xFF0074C4),
-        iconBackgroundColor: const Color.fromRGBO(0, 116, 196, 0.2),
-        title: 'Blood Pressure',
-        timestamp: 'Today 10:23 Am',
-        value: '118/76',
-        onTap: () => print('Blood Pressure tapped'),
-      ),
-      HealthMetric(
-        image: "assets/images/ic6.svg",
-        iconColor: const Color(0xFF1A9B8E),
-        iconBackgroundColor: const Color.fromRGBO(26, 155, 142, 0.2),
-        title: 'Blood Glucose',
-        timestamp: 'Today 10:23 Am',
-        value: '98',
-        unit: 'mg/dL',
-        onTap: () => print('Blood Glucose tapped'),
-      ),
-      HealthMetric(
-        image: "assets/images/ic7.png",
-        iconColor: const Color(0xFF2563EB),
-        iconBackgroundColor: const Color.fromRGBO(37, 99, 235, 0.2),
-        title: 'Oxygen (Spo2)',
-        timestamp: 'Today 10:23 Am',
-        value: '95',
-        unit: '%',
-        onTap: () => print('Oxygen tapped'),
-        isTrue:true
-      ),
-    ];
+
+final HealthService healthService = HealthService();
+  Map<String, dynamic>? healthData;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // 👇 FIX: Only run after widget tree is built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadHealthData();
+    });
+  }
+
+  Future<void> _loadHealthData() async {
+    bool isInstalled = await healthService.isHealthAppInstalled();
+    if (!isInstalled) {
+      healthService.suggestInstallHealthApp(context);
+      return;
+    }
+
+    bool authorized = await healthService.requestAuthorization();
+    debugPrint("$authorized");
+    if (!authorized) {
+      debugPrint("❌ Health permissions denied!");
+      return;
+    }
+
+    Map<String, dynamic> data = await healthService.fetchAllData(
+      from: DateTime.now().subtract(const Duration(days: 30)),
+      to: DateTime.now(),
+    );
+
+    if (!mounted) return;
+    setState(() {
+      healthData = data;
+    });
+
+    // sendData(data);
+
+    debugPrint("✅ Platform: ${healthService.getPlatform()}");
+    debugPrint(
+      "✅ Fetched health data: ${getHealthValue('HealthDataType.STEPS')}",
+    );
+  }
+
+  // Helper to get a single value safely from healthData
+  /// Sums all entries in `healthData[type]` and returns "total unit"
+  /// Works with entries shaped like:
+  /// { "value": {"numericValue": 10}, "unit": "COUNT", ... }
+  // --- Simplified units map ---
+  Map<String, String> simplifiedUnits = {
+    // Distance
+    "METER": "m",
+    "KILOMETER": "km",
+    "MILE": "mi",
+    "YARD": "yd",
+    "FOOT": "ft",
+
+    // Weight
+    "GRAM": "g",
+    "KILOGRAM": "kg",
+    "OUNCE": "oz",
+    "POUND": "lb",
+
+    // Pressure
+    "MILLIMETER_OF_MERCURY": "mmHg",
+    "INCH_OF_MERCURY": "inHg",
+    "PASCAL": "Pa",
+    "KILOPASCAL": "kPa",
+
+    // Temperature
+    "CELSIUS": "°C",
+    "FAHRENHEIT": "°F",
+    "KELVIN": "K",
+
+    // Energy
+    "CALORIE": "kcal",
+    "KILOJOULE": "kJ",
+
+    // Time
+    "SECOND": "s",
+    "MINUTE": "min",
+    "HOUR": "h",
+    "DAY": "d",
+
+    // Volume / Liquids
+    "LITER": "L",
+    "MILLILITER": "mL",
+    "FLUID_OUNCE_US": "fl oz",
+
+    // Counts / Steps
+    "COUNT": "",
+    "BEAT": "beat",
+    "BEAT_PER_MINUTE": "bpm",
+    "REP": "rep",
+
+    // Percentages
+    "PERCENTAGE": "%",
+
+    // Sleep / activity types
+    "SLEEP_ASLEEP": "sleep",
+    "SLEEP_IN_BED": "in bed",
+    "SLEEP_AWAKE": "awake",
+
+    // Other HealthKit / Health Connect types
+    "DISTANCE_WALKING_RUNNING": "m",
+    "DISTANCE_CYCLING": "m",
+    "ACTIVE_ENERGY_BURNED": "kcal",
+    "BASAL_ENERGY_BURNED": "kcal",
+    "BODY_MASS_INDEX": "BMI",
+    "BODY_FAT_PERCENTAGE": "%",
+    "LEAN_BODY_MASS": "kg",
+    "RESTING_HEART_RATE": "bpm",
+    "HEART_RATE": "bpm",
+    "STEP_COUNT": "",
+    "FLIGHTS_CLIMBED": "fl",
+    "WALKING_HEART_RATE": "bpm",
+    "VO2_MAX": "ml/kg/min",
+    "DISTANCE_SWIMMING": "m",
+    "SWIM_STROKE_COUNT": "stroke",
+    "WORKOUT_DURATION": "min",
+    "DURATION": "min",
+    "BODY_TEMPERATURE": "°C",
+    "BLOOD_PRESSURE_SYSTOLIC": "mmHg",
+    "BLOOD_PRESSURE_DIASTOLIC": "mmHg",
+    "BLOOD_GLUCOSE": "mg/dL",
+    "BLOOD_OXYGEN": "%",
+    "RESPIRATORY_RATE": "breaths/min",
+    "OXYGEN_SATURATION": "%",
+    "HEADACHE_SEVERITY": "",
+    "MOOD": "",
+    "STRESS_LEVEL": "",
+    "WATER": "L",
+    "CAFFEINE": "mg",
+    "ALCOHOL_CONSUMED": "g",
+    "TOBACCO_SMOKED": "cig",
+    "BODY_MASS": "kg",
+    "HEIGHT": "m",
+    "BEATS_PER_MINUTE": "bpm",
+    "PERCENT": "%",
+  };
+
+  // --- Your function remains unchanged except mapping unit at the end ---
+  Map<String, dynamic> getHealthValue(
+    String type, {
+    int decimalsIfDouble = 2,
+    bool convertMetersToKm = false,
+  }) {
+    if (healthData == null) return {"data": "--", "unit": ""};
+
+    final raw = healthData![type];
+    if (raw is! List || raw.isEmpty) return {"data": "--", "unit": ""};
+
+    // --- pick the most common unit present in the list ---
+    String _resolveUnit(List list) {
+      final counts = <String, int>{};
+      for (final e in list) {
+        if (e is Map) {
+          String? u;
+          if (e['unit'] is String) {
+            u = e['unit'] as String;
+          }
+          if (u != null && u.isNotEmpty) {
+            counts[u] = (counts[u] ?? 0) + 1;
+          }
+        }
+      }
+      if (counts.isEmpty) return '';
+      return counts.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
+    }
+
+    final unitFromData = _resolveUnit(raw);
+
+    // --- sum numeric values ---
+    num total = 0;
+
+    for (final e in raw) {
+      if (e is! Map) continue;
+
+      final value = e['value'];
+      if (value != null) {
+        total += value.numericValue;
+      }
+    }
+
+    // optional unit conversion
+    String outUnit = simplifiedUnits[unitFromData] ?? unitFromData;
+    if (convertMetersToKm && unitFromData == "METER") {
+      total = total / 1000;
+      outUnit = "km";
+    }
+
+    // format nicely
+    String formatted;
+    if (total % 1 == 0) {
+      formatted = total.toInt().toString();
+    } else {
+      formatted = total.toStringAsFixed(decimalsIfDouble);
+    }
+
+    return {"data": formatted, "unit": outUnit};
+  }
+
+
+  
   final List<BloodPressureData> sampleData = [
       BloodPressureData(day: 'Mon', systolic: 120, diastolic: 78),
       BloodPressureData(day: 'Tue', systolic: 118, diastolic: 76),
@@ -78,7 +243,50 @@ final List<HeartRateData> sampleData2 = [
     ];
   @override
   Widget build(BuildContext context) {
-      
+  final List<HealthMetric> sampleMetrics = [
+      HealthMetric(
+        image: "assets/images/heartbeat.svg",
+        iconColor: const Color(0xFF862633),
+        iconBackgroundColor: const Color.fromRGBO(134, 38, 51, 0.2),
+        title: 'Heart Rate',
+        timestamp: 'Today 10:23 Am',
+        value: (getHealthValue('HealthDataType.HEART_RATE')['data']),
+                      unit: getHealthValue('HealthDataType.HEART_RATE')['unit'],
+        onTap: () => print('Heart Rate tapped'),
+      ),
+      HealthMetric(
+        image: "assets/images/ic5.svg",
+        iconColor: const Color(0xFF0074C4),
+        iconBackgroundColor: const Color.fromRGBO(0, 116, 196, 0.2),
+        title: 'Blood Pressure',
+        timestamp: 'Today 10:23 Am',
+        value: (getHealthValue('HealthDataType.BLOOD_PRESSURE_SYSTOLIC')['data']),
+                      unit: getHealthValue('HealthDataType.BLOOD_PRESSURE_SYSTOLIC')['unit'],
+        onTap: () => print('Blood Pressure tapped'),
+      ),
+      HealthMetric(
+        image: "assets/images/ic6.svg",
+        iconColor: const Color(0xFF1A9B8E),
+        iconBackgroundColor: const Color.fromRGBO(26, 155, 142, 0.2),
+        title: 'Blood Glucose',
+        timestamp: 'Today 10:23 Am',
+        value: (getHealthValue('HealthDataType.BLOOD_GLUCOSE')['data']),
+                      unit: getHealthValue('HealthDataType.BLOOD_GLUCOSE')['unit'],
+        onTap: () => print('Blood Glucose tapped'),
+      ),
+      HealthMetric(
+        image: "assets/images/ic7.png",
+        iconColor: const Color(0xFF2563EB),
+        iconBackgroundColor: const Color.fromRGBO(37, 99, 235, 0.2),
+        title: 'Oxygen (Spo2)',
+        timestamp: 'Today 10:23 Am',
+        value: (getHealthValue('HealthDataType.BLOOD_OXYGEN')['data']),
+                      unit: getHealthValue('HealthDataType.BLOOD_OXYGEN')['unit'],
+        onTap: () => print('Oxygen tapped'),
+        isTrue:true
+      ),
+    ];
+     
     return Scaffold(
       appBar: CustomAppBar(
         leftWidget: Row(
@@ -204,8 +412,8 @@ final List<HeartRateData> sampleData2 = [
                       imageColor: Color(0xFF1A9B8E),
                       imageBackgroundColor: Color.fromRGBO(26, 155, 142, 0.2),
                       title: "Blood Glucose",
-                      value: "90",
-                      unit: "mm/dL",
+                      value: getHealthValue('HealthDataType.BLOOD_GLUCOSE')['data'],
+                      unit: getHealthValue('HealthDataType.BLOOD_GLUCOSE')['unit'],
                       goalLabel: "Last reading: 4h ago",
                       progress: 5.2 / 8.0,
                     ),
@@ -216,8 +424,8 @@ final List<HeartRateData> sampleData2 = [
                       imageColor: Color(0xFF2563EB),
                       imageBackgroundColor: Color.fromRGBO(37, 99, 235, 0.2),
                       title: "Oxygen(Sp02)",
-                      value: "12%",
-                      unit: "",
+                      value: getHealthValue('HealthDataType.BLOOD_OXYGEN')['data'],
+                      unit: getHealthValue('HealthDataType.BLOOD_OXYGEN')['unit'],
                       goalLabel: "Last reading: 2h ago",
                       progress: 12 / 15,
                       isTrue: true
@@ -229,8 +437,8 @@ final List<HeartRateData> sampleData2 = [
                       imageColor: Color(0xFFFF1919),
                       imageBackgroundColor: Color.fromRGBO(255, 25, 25, 0.2),
                       title: "Respiratory Rate",
-                      value: "16",
-                      unit: "rpm",
+                      value: getHealthValue('HealthDataType.RESPIRATORY_RATE')['data'],
+                      unit: getHealthValue('HealthDataType.RESPIRATORY_RATE')['unit'],
                       goalLabel: "Last reading: 7h ago",
                       progress: 5.2 / 8.0,
                     ),
@@ -241,8 +449,8 @@ final List<HeartRateData> sampleData2 = [
                       imageColor: Color(0xFF9333EA),
                       imageBackgroundColor: Color.fromRGBO(147, 51, 234, 0.2),
                       title: "Temperature",
-                      value: "36.7",
-                      unit: "C",
+                      value: getHealthValue('HealthDataType.BODY_TEMPERATURE')['data'],
+                      unit: getHealthValue('HealthDataType.BODY_TEMPERATURE')['unit'],
                       goalLabel: "Last reading: 6h ago",
                       progress: 12 / 15,
                     ),
@@ -284,15 +492,15 @@ final List<HeartRateData> sampleData2 = [
                   primaryMetrics: [
                     BodyMetric(
                       label: 'Weight',
-                      value: '68.5',
-                      unit: 'kg',
+                      value: getHealthValue('HealthDataType.WEIGHT')['data'],
+                      unit: getHealthValue('HealthDataType.WEIGHT')['unit'],
                       changeText: '+ 0.5 from last week',
                       changeColor: const Color(0xFF4CAF50),
                     ),
                     BodyMetric(
                       label: 'Height',
-                      value: '175',
-                      unit: 'cm',
+                      value: getHealthValue('HealthDataType.HEIGHT')['data'],
+                      unit: getHealthValue('HealthDataType.HEIGHT')['unit'],
                       additionalInfo: 'Last Update 3 mon ago',
                       additionalInfoColor: Colors.grey[600],
                     ),
@@ -300,21 +508,21 @@ final List<HeartRateData> sampleData2 = [
                   secondaryMetrics: [
                     BodyMetric(
                       label: 'BMI',
-                      value: '22.4',
+                      value: getHealthValue('HealthDataType.BODY_MASS_INDEX')['data'],
                       status: 'Normal',
                       statusColor: const Color(0xFF4CAF50),
                     ),
                     BodyMetric(
-                      label: 'Weight',
-                      value: '23',
-                      unit: '%',
+                      label: 'Calories',
+                      value: getHealthValue('HealthDataType.TOTAL_CALORIES_BURNED')['data'],
+                      unit: "",
                       status: 'Normal',
                       statusColor: const Color(0xFF4CAF50),
                     ),
                     BodyMetric(
-                      label: 'Weight',
-                      value: '23',
-                      unit: '%',
+                      label: 'Body Fat',
+                      value: getHealthValue('HealthDataType.BODY_FAT_PERCENTAGE')['data'],
+                      unit: getHealthValue('HealthDataType.BODY_FAT_PERCENTAGE')['unit'],
                       additionalInfo: '76.1%',
                       additionalInfoColor: Colors.grey[600],
                     ),
@@ -322,17 +530,18 @@ final List<HeartRateData> sampleData2 = [
                   tertiaryMetrics: [
                     BodyMetric(
                       label: 'Bone Mass',
-                      value: '34',
-                      unit: 'kg',
+                      value: ((double.tryParse(getHealthValue('HealthDataType.WEIGHT')['data'].toString()) ?? 0.0) * 0.12).toStringAsFixed(1),
+                      unit: getHealthValue('HealthDataType.WEIGHT')['unit'],
                     ),
                     BodyMetric(
                       label: 'Water',
-                      value: '56',
-                      unit: '%',
+                      value: (getHealthValue('HealthDataType.WATER')['data']),
+                      unit: getHealthValue('HealthDataType.WATER')['unit'],
                     ),
                     BodyMetric(
-                      label: 'Visceral Fat',
-                      value: '6',
+                      label: 'Heart Rate',
+                      value: (getHealthValue('HealthDataType.HEART_RATE')['data']),
+                      unit: getHealthValue('HealthDataType.HEART_RATE')['unit'],
                     ),
                   ],
                 ),

@@ -1,73 +1,54 @@
 import 'package:flutter/material.dart';
 
 class MetricsOverview extends StatelessWidget {
-  const MetricsOverview({super.key});
+  final Map<String, Map<String, dynamic>> healthData;
+
+  const MetricsOverview({super.key, required this.healthData});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(8.0),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _buildMetricItem(
-              label: 'Calories',
-              value: '1250',
-              color: const Color(0xFF862633), // Maroon
-            ),
-            _buildMetricItem(
-              label: 'Water (Cups)',
-              value: '4/8',
-              color: const Color(0xFF862633), // Blue
-            ),
-            _buildMetricItem(
-              label: 'Sleep',
-              value: '7.5h',
-              color: const Color(0xFF862633), // Purple
-            ),
-          ],
-        ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: healthData.entries.map((entry) {
+          final label = entry.key;
+          final data = entry.value['data'];
+          final unit = entry.value['unit'] ?? '';
+          return _buildMetricItem(label, data, unit);
+        }).toList(),
       ),
     );
   }
 
-  Widget _buildMetricItem({
-    required String label,
-    required String value,
-    required Color color,
-  }) {
+  Widget _buildMetricItem(String label, dynamic data, String unit) {
     return Container(
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Color(0xFFFAFBFB))
+        border: Border.all(color: const Color(0xFFFAFBFB)),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                color: color,
-                fontWeight: FontWeight.w500,
-              ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: Colors.black54,
             ),
-            const SizedBox(height: 4),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87,
-              ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '$data$unit',
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

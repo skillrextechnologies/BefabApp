@@ -138,7 +138,7 @@ class ActivityTrackerWidget extends StatelessWidget {
                 '${progressPercentage.toInt()}%',
               ),
               _buildStatColumn(
-                'Avg. Last 7 Days',
+                'Remaining',
                 _formatNumber(averageValue),
               ),
             ],

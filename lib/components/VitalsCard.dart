@@ -59,11 +59,11 @@ class VitalsCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                const Icon(
-                  Icons.chevron_right,
-                  color: Color(0xFF862633),
-                  size: 24,
-                ),
+                // const Icon(
+                //   Icons.chevron_right,
+                //   color: Color(0xFF862633),
+                //   size: 24,
+                // ),
               ],
             ),
             const SizedBox(height: 16),
