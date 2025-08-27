@@ -197,14 +197,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     crossAxisCount: 3,
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    children: [
-                      _buildImageCard("assets/images/mail.svg", "E-Newsletters", "23 new"),
-                      _buildImageCard("assets/images/video2.svg", "Videos", "5 trending"),
-                      _buildImageCard("assets/images/sms.svg", "SMS", "4 unread"),
-                      _buildImageCard("assets/images/groups2.svg", "Group", "10 invitations"),
-                      _buildImageCard("assets/images/groups2.svg", "Competitors", "view more"),
-                      _buildImageCard("assets/images/activities2.svg", "Activities", "view more"),
-                    ],
+                   children: [
+  _buildImageCard(context, "assets/images/mail.svg", "E-Newsletters", "", "/all-newsletters"),
+  _buildImageCard(context, "assets/images/video2.svg", "Videos", "", "/video-categories"),
+  _buildImageCard(context, "assets/images/sms.svg", "SMS", "", "/message"),
+  _buildImageCard(context, "assets/images/groups2.svg", "Group", "", "/groups"),
+  _buildImageCard(context, "assets/images/groups2.svg", "Competitions", "", "/competitions-list"),
+  _buildImageCard(context, "assets/images/activities2.svg", "Activities", "", "/nutrition"),
+],
+
+
                   ),
                   const SizedBox(height: 12),
                   const Padding(
@@ -216,15 +218,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      _buildIconBoxWithText(
-                          'assets/images/log.svg', 'Log Activity', "", context, null),
-                      _buildIconBoxWithText('assets/images/goal.svg', 'Set a Goal', "new-goal",
-                          context, const NewGoalPage()),
-                      _buildIconBoxWithText(
-                          'assets/images/competition2.svg', 'Join Competition', "", context, null),
-                      _buildIconBoxWithText(
-                          'assets/images/resource.svg', 'Resource', "", context, null),
-                    ],
+  _buildIconBoxWithText(context, 'assets/images/log.svg', 'Log Activity', "/log"),
+  _buildIconBoxWithText(context, 'assets/images/goal.svg', 'Set a Goal', "/new-goal"),
+  _buildIconBoxWithText(context, 'assets/images/competition2.svg', 'Join Competition', "/competitions-list"),
+  _buildIconBoxWithText(context, 'assets/images/resource.svg', 'Resource', "/dashboard"),
+],
+
                   ),
                   const SizedBox(height: 8),
                 ],
@@ -275,13 +274,12 @@ Widget _buildGoalRow(String title, String subtitle, String percent) {
     ),
   );
 }
-
 Widget _buildIconBoxWithText(
-    String imagePath, String label, String url, BuildContext context, Widget? targetPage) {
+    BuildContext context, String imagePath, String label, String route) {
   return GestureDetector(
     onTap: () {
-      if (url.isNotEmpty && targetPage != null) {
-        Navigator.push(context, MaterialPageRoute(builder: (context) => targetPage));
+      if (route.isNotEmpty) {
+        Navigator.pushNamed(context, route); // ✅ navigate by route
       }
     },
     child: Column(
@@ -298,40 +296,62 @@ Widget _buildIconBoxWithText(
           child: SvgPicture.asset(imagePath, fit: BoxFit.contain),
         ),
         const SizedBox(height: 6),
-        Text(label, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w400)),
+        Text(label,
+            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w400)),
         const SizedBox(height: 36),
       ],
     ),
   );
 }
 
-Widget _buildImageCard(String imagePath, String title, String subtitle) {
+Widget _buildImageCard(
+    BuildContext context, String imagePath, String title, String subtitle, String route) {
   return Padding(
     padding: const EdgeInsets.all(8.0),
-    child: Container(
-      width: 80,
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF3F3F3),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SvgPicture.asset(imagePath, width: 32, height: 32, fit: BoxFit.contain),
-          const SizedBox(height: 8),
-          Text(title,
+    child: GestureDetector(
+      onTap: () {
+        if (route.isNotEmpty) {
+          Navigator.pushNamed(context, route); // ✅ use context here
+        }
+      },
+      child: Container(
+        width: 80,
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF3F3F3),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SvgPicture.asset(imagePath,
+                width: 32, height: 32, fit: BoxFit.contain),
+            const SizedBox(height: 8),
+            Text(
+              title,
               style: GoogleFonts.inter(
-                  fontSize: 12, color: Colors.black, fontWeight: FontWeight.w400),
-              textAlign: TextAlign.center),
-          Text(subtitle,
-              style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.w400),
-              textAlign: TextAlign.center),
-        ],
+                fontSize: 12,
+                color: Colors.black,
+                fontWeight: FontWeight.w400,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            Text(
+              subtitle,
+              style: const TextStyle(
+                fontSize: 10,
+                color: Colors.grey,
+                fontWeight: FontWeight.w400,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     ),
   );
 }
+
 
 Widget _buildSegmentButton(String label, bool isSelected) {
   return Container(

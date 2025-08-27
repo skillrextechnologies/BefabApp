@@ -99,14 +99,23 @@ class MyApp extends StatelessWidget {
         '/single-reel': (context) =>SingleReel(),
         '/reel': (context) => Reel(),
         '/message': (context) => MessagesPage(),
-        '/chat-screen': (context) {
-          final args =
-              ModalRoute.of(context)!.settings.arguments
-                  as Map<String, dynamic>?;
-          final chatId = args?['chatId'];
+        // main.dart (or wherever your routes are defined)
+'/chat-screen': (context) {
+  final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
 
-          return ChatScreen(chatId: chatId, userId: args?['userId'],);
-        },
+  if (args == null || args['chatId'] == null || args['userId'] == null) {
+    return const Scaffold(
+      body: Center(child: Text("Missing chat arguments")),
+    );
+  }
+
+  return ChatScreen(
+    chatId: args['chatId'] as String,
+    userId: args['userId'] as String,
+    name: args['name'] as String? ?? "User",
+  );
+},
+
         '/groups': (context) => GroupsPage(),
         '/fitness-group': (_) => FitnessGroupPage(),
         '/fitness-page': (context) => FitnessGroupPage(),

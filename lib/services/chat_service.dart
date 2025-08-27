@@ -45,6 +45,17 @@ class ChatService {
     });
   }
 
+  void disconnect() {
+    socket.disconnect();
+    socket.close();
+    print("❌ Socket disconnected");
+  }
+
+  void leaveChat(String chatId) {
+    socket.emit("leaveChat", chatId);
+    print("📌 Left chat $chatId");
+  }
+
   void onNewMessage(Function(dynamic) callback) {
     socket.on("newMessage", callback);
   }

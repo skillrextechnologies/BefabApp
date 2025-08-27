@@ -113,9 +113,9 @@ Future<void> _submitReel() async {
     // Other fields
     request.fields['title'] = _captionController.text.isNotEmpty
         ? _captionController.text
-        : "Untitled";
+        : "";
     request.fields['caption'] = _captionController.text;
-    request.fields['category'] = ""; // category is empty
+    request.fields['category'] = "BeFAB HBCU"; // category is empty
     request.fields['type'] = _category ?? "reel"; // comes from previous screen
     request.fields['durationSec'] = durationSec.toString();
 
@@ -127,13 +127,7 @@ Future<void> _submitReel() async {
       print("Upload success: $data");
 
       if (mounted) {
-        Navigator.pushNamed(context, '/single-reel', arguments: {
-          'videoPath': _videoPath,
-          'category': _category,
-          'caption': _captionController.text,
-          'location': _locationController.text,
-          'coverImagePath': _coverImagePath,
-        });
+        Navigator.pushNamed(context, '/video-categories');
       }
     } else {
       print("Upload failed: ${response.statusCode}");

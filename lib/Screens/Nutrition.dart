@@ -80,11 +80,11 @@ class NutritionPage extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
 
-                // 🧑 Profile Avatar
-                CircleAvatar(
-                  radius: 18,
-                  backgroundImage: AssetImage('assets/images/profile.jpg'),
-                ),
+                // // 🧑 Profile Avatar
+                // CircleAvatar(
+                //   radius: 18,
+                //   backgroundImage: AssetImage('assets/images/profile.jpg'),
+                // ),
                 
               ],
             ),

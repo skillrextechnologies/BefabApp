@@ -479,24 +479,24 @@ class _FitnessSummaryState extends State<FitnessSummary> {
           children: [
             SvgPicture.asset('assets/images/Arrow.svg', width: 14, height: 14),
             const SizedBox(width: 4),
-            const CircleAvatar(
-              radius: 20,
-              backgroundImage: AssetImage('assets/images/profile.jpg'),
-            ),
+            // const CircleAvatar(
+            //   radius: 20,
+            //   backgroundImage: AssetImage('assets/images/profile.jpg'),
+            // ),
             const SizedBox(width: 10),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
-                Text(
-                  'Hi, John',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                ),
-                Text(
-                  'Good Evening',
-                  style: TextStyle(fontSize: 13, color: Colors.grey),
-                ),
-              ],
+              // children: const [
+              //   Text(
+              //     'Hi, John',
+              //     style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              //   ),
+              //   Text(
+              //     'Good Evening',
+              //     style: TextStyle(fontSize: 13, color: Colors.grey),
+              //   ),
+              // ],
             ),
           ],
         ),

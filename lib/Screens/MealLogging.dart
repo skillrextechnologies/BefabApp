@@ -9,7 +9,10 @@ import 'package:befab/components/SleepTracker.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_svg/flutter_svg.dart'; // Ensure this import is at the top
+import 'package:mobile_scanner/mobile_scanner.dart'; // >>> ADDED
 import '../services/health_service.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class MealLogging extends StatefulWidget {
   @override
@@ -226,18 +229,9 @@ class _MealLoggingState extends State<MealLogging> {
       calories: 320,
       selectedBgColor: Color(0xFFFFF0F0),
     ),
-    MealOption(
-      name: 'Lunch',
-      calories: 480,
-    ),
-    MealOption(
-      name: 'Dinner',
-      calories: 450,
-    ),
-    MealOption(
-      name: 'Snack',
-      calories: 0,
-    ),
+    MealOption(name: 'Lunch', calories: 480),
+    MealOption(name: 'Dinner', calories: 450),
+    MealOption(name: 'Snack', calories: 0),
   ];
   final List<AddedItem> sampleItems = [
     AddedItem.food(
@@ -252,11 +246,7 @@ class _MealLoggingState extends State<MealLogging> {
       calories: 80,
       quantity: 1,
     ),
-    
   ];
-  
-
-  
 
   @override
   Widget build(BuildContext context) {
@@ -284,7 +274,7 @@ class _MealLoggingState extends State<MealLogging> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-  surfaceTintColor: Colors.transparent,  // Prevent M3 tint
+        surfaceTintColor: Colors.transparent, // Prevent M3 tint
         leadingWidth: 100,
         leading: GestureDetector(
           onTap: () {
@@ -327,11 +317,27 @@ class _MealLoggingState extends State<MealLogging> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            MetricsOverview(healthData: {
-  'Calories': {'data': getHealthValue('HealthDataType.TOTAL_CALORIES_BURNED')['data'], 'unit': 'kcal'},
-  'Water': {'data': getHealthValue('HealthDataType.WATER')['data'], 'unit': getHealthValue('HealthDataType.WATER')['unit']},
-  'Sleep': {'data': getHealthValue('HealthDataType.SLEEP_SESSION')['data'], 'unit': getHealthValue('HealthDataType.SLEEP_SESSION')['unit']},
-},),
+            MetricsOverview(
+              healthData: {
+                'Calories': {
+                  'data':
+                      getHealthValue(
+                        'HealthDataType.TOTAL_CALORIES_BURNED',
+                      )['data'],
+                  'unit': 'kcal',
+                },
+                'Water': {
+                  'data': getHealthValue('HealthDataType.WATER')['data'],
+                  'unit': getHealthValue('HealthDataType.WATER')['unit'],
+                },
+                'Sleep': {
+                  'data':
+                      getHealthValue('HealthDataType.SLEEP_SESSION')['data'],
+                  'unit':
+                      getHealthValue('HealthDataType.SLEEP_SESSION')['unit'],
+                },
+              },
+            ),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -340,28 +346,26 @@ class _MealLoggingState extends State<MealLogging> {
                   child: Text(
                     "Meal Logging",
                     style: GoogleFonts.inter(
-                            color: Color(0xFF000000),
-                            fontSize: 22,
-                            fontWeight: FontWeight.w600,
-                          ),
+                      color: Color(0xFF000000),
+                      fontSize: 22,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
                 Padding(
                   padding: const EdgeInsets.all(8.0),
-                  child:  Text(
+                  child: Text(
                     "",
                     style: GoogleFonts.lexend(
-                            color: Color(0xFF862633),
-                            fontSize: 16,
-                            fontWeight: FontWeight.w400,
-                          ),
+                      color: Color(0xFF862633),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w400,
+                    ),
                   ),
                 ),
               ],
             ),
-            
-            
-            
+
             HeadingWithImageRow(
               heading: "Breakfast",
               subtitle: "320 calories",
@@ -371,8 +375,7 @@ class _MealLoggingState extends State<MealLogging> {
                   size: 30,
                   color: Color(0xFF862633),
                 ),
-                onPressed:
-                    () {},
+                onPressed: () {},
               ),
             ),
             HeadingWithImageRow(
@@ -384,8 +387,7 @@ class _MealLoggingState extends State<MealLogging> {
                   size: 30,
                   color: Color(0xFF862633),
                 ),
-                onPressed:
-                    () {},
+                onPressed: () {},
               ),
             ),
             HeadingWithImageRow(
@@ -397,8 +399,7 @@ class _MealLoggingState extends State<MealLogging> {
                   size: 30,
                   color: Color(0xFF862633),
                 ),
-                onPressed:
-                    () {},
+                onPressed: () {},
               ),
             ),
             HeadingWithImageRow(
@@ -410,11 +411,10 @@ class _MealLoggingState extends State<MealLogging> {
                   size: 30,
                   color: Color(0xFF862633),
                 ),
-                onPressed:
-                    () {},
+                onPressed: () {},
               ),
             ),
-            
+
             Align(
               alignment: Alignment.topLeft,
               child: Padding(
@@ -422,10 +422,10 @@ class _MealLoggingState extends State<MealLogging> {
                 child: Text(
                   "Add Food Items",
                   style: GoogleFonts.lexend(
-                          color: Color(0xFF000000),
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                        ),
+                    color: Color(0xFF000000),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
             ),
@@ -474,17 +474,29 @@ class _MealLoggingState extends State<MealLogging> {
                       ),
                     ),
                   ),
-                  onPressed: () {},
+                  // >>> UPDATED: open scanner and return value
+                  onPressed: () async {
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const BarcodeScannerScreen(),
+                      ),
+                    );
+                    if (result != null) {
+                      debugPrint("✅ Scanned Barcode: $result");
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text("Scanned: $result")),
+                      );
+                      // If you later want to auto-add an item, do it here.
+                      // setState(() { sampleItems.add(...); });
+                    }
+                  },
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 32,
-                      vertical: 12,
-                    ),
+                    padding: const EdgeInsets.all(10), // ✅ FIXED
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         _buildBarcode(), // Ensure this has no padding/margin
-                        // No SizedBox or spacing here
                         Text(
                           'Scan Barcode',
                           style: GoogleFonts.inter(
@@ -526,27 +538,24 @@ class _MealLoggingState extends State<MealLogging> {
                 ),
               ),
             ),
-            
-ProgressTracker(
-  title: 'Calories macro Tracking',
-  leftText: '1250/2000 cal',
-  rightText: '750 cal remaining',
-  progress: 0.625, // 1250/2000
-  progressColor: Color(0xFF862633), // Optional custom color
 
-),
+            ProgressTracker(
+              title: 'Calories macro Tracking',
+              leftText: '1250/2000 cal',
+              rightText: '750 cal remaining',
+              progress: 0.625, // 1250/2000
+              progressColor: Color(0xFF862633), // Optional custom color
+            ),
             MetricsOverview2(),
 
-ProgressTracker(
-  title: 'Hydration Tracker',
-  leftText: '75%',
-  rightText: '100%',
-  progress: 0.75,
-  progressColor: Color(0xFF862633), // Optional custom color
-),
-            
-            
-    
+            ProgressTracker(
+              title: 'Hydration Tracker',
+              leftText: '75%',
+              rightText: '100%',
+              progress: 0.75,
+              progressColor: Color(0xFF862633), // Optional custom color
+            ),
+
             Padding(
               padding: const EdgeInsets.all(12.0),
               child: SizedBox(
@@ -581,15 +590,15 @@ ProgressTracker(
                 child: Text(
                   "Sleep Tracker",
                   style: GoogleFonts.lexend(
-                          color: Color(0xFF000000),
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                        ),
+                    color: Color(0xFF000000),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
             ),
             SleepTracker(),
-          Padding(
+            Padding(
               padding: const EdgeInsets.all(8.0),
               child: Align(
                 alignment: Alignment.topLeft,
@@ -638,7 +647,8 @@ ProgressTracker(
                 ),
               ),
             ),
-            SizedBox(height: 24,)          ],
+            SizedBox(height: 24),
+          ],
         ),
       ),
       floatingActionButton: SizedBox(
@@ -658,7 +668,6 @@ ProgressTracker(
     );
   }
 }
-
 
 Widget _buildBarcode() {
   return Container(
@@ -698,4 +707,89 @@ Widget _buildBarcodeBar({required double width, required double height}) {
       borderRadius: BorderRadius.circular(0.5),
     ),
   );
+}
+
+/// ======================================================================
+/// Minimal Scanner Screen glued at the end of THIS FILE (no extra files).
+/// ======================================================================
+/// ======================================================================
+/// Minimal Scanner Screen glued at the end of THIS FILE (no extra files).
+/// ======================================================================
+
+// --- helper: fetch product info by barcode ---
+Future<Map<String, dynamic>?> fetchProductFromBarcode(String barcode) async {
+  final url = Uri.parse("https://world.openfoodfacts.org/api/v0/product/$barcode.json");
+  final response = await http.get(url);
+
+  if (response.statusCode == 200) {
+    final data = json.decode(response.body);
+    if (data['status'] == 1) {
+      return data['product'];
+    } else {
+      return null; // not found
+    }
+  } else {
+    throw Exception("API Error: ${response.statusCode}");
+  }
+}
+
+class BarcodeScannerScreen extends StatefulWidget {
+  const BarcodeScannerScreen({super.key});
+
+  @override
+  State<BarcodeScannerScreen> createState() => _BarcodeScannerScreenState();
+}
+
+class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
+  bool _scanned = false; // ✅ guard to prevent multiple pops
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Scan Barcode"),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+      ),
+      body: MobileScanner(
+        onDetect: (barcodeCapture) async {
+          if (_scanned) return; // ✅ ignore if already scanned
+          _scanned = true;
+
+          final barcodes = barcodeCapture.barcodes;
+          if (barcodes.isNotEmpty) {
+            final code = barcodes.first.rawValue;
+            if (code != null) {
+              try {
+                final product = await fetchProductFromBarcode(code);
+
+                if (product != null && mounted) {
+                  Navigator.pop(context, {
+                    "barcode": code,
+                    "name": product["product_name"] ?? "Unknown",
+                    "brand": product["brands"] ?? "N/A",
+                    "calories": product["nutriments"]?["energy-kcal_100g"],
+                  });
+                } else {
+                  if (mounted) {
+                    Navigator.pop(context, {
+                      "barcode": code,
+                      "error": "Product not found",
+                    });
+                  }
+                }
+              } catch (e) {
+                if (mounted) {
+                  Navigator.pop(context, {
+                    "barcode": code,
+                    "error": "API error: $e",
+                  });
+                }
+              }
+            }
+          }
+        },
+      ),
+    );
+  }
 }
