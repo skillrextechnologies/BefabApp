@@ -1,35 +1,32 @@
 workflows:
-  ios-testflight:
-    name: iOS TestFlight
+  ios-workflow:
+    name: iOS Build and Deploy
     environment:
       flutter: stable
       xcode: latest
-
+      cocoapods: default
+      vars:
+        APP_STORE_CONNECT_KEY_IDENTIFIER: 6Z3LGS7MW7   # your Key ID
+        APP_STORE_CONNECT_ISSUER_ID: d8183cba-9d7d-4d93-8172-cb155320eb7f # your Issuer ID
+        APP_STORE_CONNECT_PRIVATE_KEY: Encrypted(p8 file here if using env var)
     scripts:
-      - name: Get Flutter packages
-        script: flutter pub get
-
-      - name: Clean Flutter & Pods
+      - name: Install dependencies
         script: |
           flutter clean
-          rm -rf ios/Pods
-          rm -rf ios/.symlinks
-          rm -rf ios/Flutter/Flutter.framework
-          rm -rf ios/Flutter/Flutter.podspec
-
-      - name: Reinstall CocoaPods
+          flutter pub get
+      - name: iOS Pod setup
         script: |
           cd ios
-          pod deintegrate
           pod repo update
           pod install
           cd ..
-
-      - name: Build iOS release
-        script: flutter build ipa --release --no-codesign
-
+      - name: Build iOS
+        script: |
+          flutter build ipa --release --no-codesign
     artifacts:
       - build/ios/ipa/*.ipa
+      - build/ios/ipa/*.dSYM.zip
+      - build/ios/ipa/*.app
 
     publishing:
       app_store_connect:
