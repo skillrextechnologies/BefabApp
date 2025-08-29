@@ -40,7 +40,7 @@ class HealthStatusCard extends StatelessWidget {
                               fontSize: 18,
                               color: Color(0xFF191919))),
                       Text(
-                        "Last update: ${stat.lastUpdated}",
+                        "${stat.lastUpdated}",
                         style: GoogleFonts.inter(
                           fontSize: 14,
                           fontWeight: FontWeight.w400,

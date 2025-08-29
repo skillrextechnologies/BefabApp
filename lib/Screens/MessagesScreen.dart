@@ -14,16 +14,34 @@ class MessagesPage extends StatefulWidget {
 
 class _MessagesPageState extends State<MessagesPage> {
   final storage = const FlutterSecureStorage();
+  final TextEditingController _searchController = TextEditingController();
   List<Map<String, dynamic>> messages = [];
   List<Map<String, dynamic>> searchResults = [];
   bool loading = true;
   String myUserId = "";
+  bool isSearching = false;
 
   @override
   void initState() {
     super.initState();
     _fetchChats();
     _fetchUserId();
+    
+    // Listen for changes in search text
+    _searchController.addListener(() {
+      if (_searchController.text.isEmpty) {
+        setState(() {
+          isSearching = false;
+          searchResults = [];
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchUserId() async {
@@ -81,9 +99,16 @@ class _MessagesPageState extends State<MessagesPage> {
 
   void _searchUsers(String query) async {
     if (query.isEmpty) {
-      setState(() => searchResults = []);
+      setState(() {
+        isSearching = false;
+        searchResults = [];
+      });
       return;
     }
+
+    setState(() {
+      isSearching = true;
+    });
 
     final token = await storage.read(key: "token");
     if (token == null) return;
@@ -111,28 +136,97 @@ class _MessagesPageState extends State<MessagesPage> {
     }
   }
 
+  Future<void> _startChatWithUser(Map<String, dynamic> user) async {
+    final token = await storage.read(key: "token");
+    if (token == null) return;
+
+    
+final url = "${dotenv.env['BACKEND_URL']}/app/chats";
+final body = jsonEncode({
+  "participantIds": [user['userId']], // sending userId in JSON body
+});
+
+final res = await http.post(
+  Uri.parse(url),
+  headers: {
+    "Authorization": "Bearer $token",
+    "Content-Type": "application/json", // important for JSON body
+  },
+  body: body,
+);
+
+    if (res.statusCode == 200) {
+      final data = json.decode(res.body);
+      final chatId = data['chatId'];
+
+      if (mounted) {
+        // Clear search and return to messages list
+        setState(() {
+          _searchController.clear();
+          isSearching = false;
+          searchResults = [];
+        });
+        
+        // Navigate to chat screen
+        Navigator.pushNamed(
+          context,
+          '/chat-screen',
+          arguments: {
+            "chatId": chatId,
+            "userId": user['userId'],
+            "name": user['name'],
+          },
+        ).then((_) {
+          // Refresh chats when returning from chat screen
+          _fetchChats();
+        });
+      }
+    } else {
+      // Handle error
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Failed to start chat")),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Messages"),
+        title: isSearching 
+            ? TextField(
+                controller: _searchController,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  hintText: "Search users...",
+                  border: InputBorder.none,
+                ),
+                onChanged: _searchUsers,
+              )
+            : const Text("Messages"),
+        actions: [
+          IconButton(
+            icon: Icon(isSearching ? Icons.close : Icons.search),
+            onPressed: () {
+              setState(() {
+                if (isSearching) {
+                  _searchController.clear();
+                  isSearching = false;
+                  searchResults = [];
+                } else {
+                  isSearching = true;
+                }
+              });
+            },
+          ),
+        ],
       ),
       body: Column(
         children: [
-          // 🔎 search bar
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: TextField(
-              onChanged: _searchUsers,
-              decoration: const InputDecoration(
-                hintText: "Search users...",
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ),
-
-          // 🔎 search results
-          if (searchResults.isNotEmpty)
+          // Show either search results or message list
+          if (isSearching && searchResults.isNotEmpty)
             Expanded(
               child: ListView.builder(
                 itemCount: searchResults.length,
@@ -143,36 +237,15 @@ class _MessagesPageState extends State<MessagesPage> {
                       backgroundImage: NetworkImage(user['avatar']),
                     ),
                     title: Text(user['name']),
-                    onTap: () async {
-                      // Call backend to create or get existing chat
-                      final token = await storage.read(key: "token");
-                      final url =
-                          "${dotenv.env['BACKEND_URL']}/app/chats/with/${user['userId']}";
-
-                      final res = await http.post(
-                        Uri.parse(url),
-                        headers: {"Authorization": "Bearer $token"},
-                      );
-
-                      if (res.statusCode == 200) {
-                        final data = json.decode(res.body);
-                        final chatId = data['chatId'];
-
-                        if (mounted) {
-                          Navigator.pushNamed(
-                            context,
-                            '/chat-screen',
-                            arguments: {
-                              "chatId": chatId,
-                              "userId": user['userId'],
-                              "name": user['name'],
-                            },
-                          );
-                        }
-                      }
-                    },
+                    onTap: () => _startChatWithUser(user),
                   );
                 },
+              ),
+            )
+          else if (isSearching && !loading)
+            const Expanded(
+              child: Center(
+                child: Text("No users found"),
               ),
             )
           else if (loading)
@@ -197,10 +270,13 @@ class _MessagesPageState extends State<MessagesPage> {
                         '/chat-screen',
                         arguments: {
                           "chatId": chat['chatId'],
-                          "userId": chat['userId'], // ✅ fixed
+                          "userId": chat['userId'],
                           "name": chat['name'],
                         },
-                      );
+                      ).then((_) {
+                        // Refresh chats when returning from chat screen
+                        _fetchChats();
+                      });
                     },
                   );
                 },

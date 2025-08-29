@@ -362,7 +362,7 @@ class _ActivityFitnessState extends State<ActivityFitness> {
                       image: "assets/images/ic2.svg",
                       imageColor: Color(0xFF2563EB),
                       imageBackgroundColor: Color.fromRGBO(37, 99, 235, 0.2),
-                      title: "Body Fat",
+                      title: "Steps",
                       value: getHealthValue('HealthDataType.STEPS')['data'],
                       unit: "",
                       goalLabel: "",

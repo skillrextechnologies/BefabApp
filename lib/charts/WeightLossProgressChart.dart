@@ -1,9 +1,186 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 
-class WeightLossProgressChart extends StatelessWidget {
+class WeightLossProgressChart extends StatefulWidget {
   const WeightLossProgressChart({Key? key}) : super(key: key);
+
+  @override
+  State<WeightLossProgressChart> createState() => _WeightLossProgressChartState();
+}
+
+class _WeightLossProgressChartState extends State<WeightLossProgressChart> {
+  List<Map<String, dynamic>> _nutritionData = [];
+  bool _isLoading = true;
+  String _errorMessage = '';
+  double _maxCalories = 1000; // Default max calories for scaling
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchNutritionDataForChart();
+  }
+
+  Future<void> _fetchNutritionDataForChart() async {
+    try {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = '';
+      });
+
+      // Fetch data for the last 6 days (including today)
+      final List<Map<String, dynamic>> dataList = [];
+      final DateTime now = DateTime.now();
+      
+      for (int i = 5; i >= 0; i--) {
+        final DateTime date = now.subtract(Duration(days: i));
+        final Map<String, dynamic>? data = await _fetchNutritionDataForDate(date);
+        
+        if (data != null) {
+          final double totalCalories = _calculateTotalCalories(data);
+          dataList.add({
+            'date': date,
+            'data': data,
+            'totalCalories': totalCalories,
+          });
+        }
+      }
+
+      // Calculate max calories for scaling
+      if (dataList.isNotEmpty) {
+        _maxCalories = dataList
+            .map((data) => data['totalCalories'])
+            .cast<double>()
+            .reduce((a, b) => a > b ? a : b);
+        
+        // Ensure maxCalories is at least 500 for better chart visibility
+        _maxCalories = _maxCalories < 500 ? 500 : _maxCalories;
+      }
+
+      setState(() {
+        _nutritionData = dataList;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Failed to load data';
+      });
+      print('❌ Error fetching nutrition data for chart: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>?> _fetchNutritionDataForDate(DateTime date) async {
+    try {
+      final String backendUrl = dotenv.env['BACKEND_URL'] ?? '';
+      if (backendUrl.isEmpty) {
+        throw Exception('BACKEND_URL is empty in .env');
+      }
+
+      final storage = FlutterSecureStorage();
+      final token = await storage.read(key: 'token');
+      if (token == null) {
+        throw Exception('No auth token found in storage');
+      }
+
+      final String formattedDate = DateFormat('yyyy-MM-dd').format(date);
+      final String url = '$backendUrl/app/nutrition/$formattedDate';
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else if (response.statusCode == 404) {
+        // Return empty data structure for dates with no data
+        return {
+          'meals': {
+            'other': [],
+            'breakfast': [],
+            'lunch': [],
+            'dinner': [],
+            'snacks': []
+          },
+          'date': formattedDate
+        };
+      } else {
+        throw Exception('Failed to fetch data. Status code: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ Error fetching nutrition data for date: $e');
+      return null;
+    }
+  }
+
+  double _calculateTotalCalories(Map<String, dynamic> data) {
+    try {
+      double totalCalories = 0;
+      
+      if (data.containsKey('meals') && data['meals'] is Map) {
+        final Map<String, dynamic> meals = data['meals'];
+        
+        meals.forEach((category, items) {
+          if (items is List) {
+            for (var item in items) {
+              if (item is Map<String, dynamic> && item.containsKey('calories')) {
+                totalCalories += (item['calories'] as num).toDouble();
+              }
+            }
+          }
+        });
+      }
+      
+      return totalCalories;
+    } catch (e) {
+      print('❌ Error calculating total calories: $e');
+      return 0;
+    }
+  }
+
+  List<FlSpot> _getChartSpots() {
+    if (_nutritionData.isEmpty) {
+      return [];
+    }
+
+    return List.generate(_nutritionData.length, (index) {
+      return FlSpot(index.toDouble(), _nutritionData[index]['totalCalories']);
+    });
+  }
+
+  List<String> _getDayLabels() {
+    if (_nutritionData.isEmpty) {
+      return [];
+    }
+
+    return _nutritionData.map((data) {
+      final DateTime date = data['date'];
+      return DateFormat('d').format(date); // Day of month without leading zero
+    }).toList();
+  }
+
+  List<double> _getYAxisValues() {
+    if (_maxCalories <= 0) return [0, 250, 500, 750, 1000];
+    
+    final double interval = _maxCalories / 4;
+    return [
+      0,
+      interval,
+      interval * 2,
+      interval * 3,
+      _maxCalories
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,159 +197,184 @@ class WeightLossProgressChart extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Weight Loss Progress',
+                'Calories Progress',
                 style: GoogleFonts.inter(
                   fontSize: 16,
                   fontWeight: FontWeight.w400,
                   color: Color(0xFF000000),
                 ),
               ),
-              Icon(Icons.keyboard_arrow_up, color: Colors.grey[600], size: 24),
+              IconButton(
+                icon: Icon(Icons.refresh, color: Colors.grey[600], size: 24),
+                onPressed: _fetchNutritionDataForChart,
+              ),
             ],
           ),
           const SizedBox(height: 20),
-          SizedBox(
-            height: 200,
-            child: LineChart(
-              LineChartData(
-                gridData: FlGridData(
-                  show: true,
-                  drawVerticalLine: true,
-                  drawHorizontalLine: false,
-                  verticalInterval: 1,
-                  getDrawingVerticalLine: (value) {
-                    return FlLine(
-                      color: Colors.grey[300]!,
-                      strokeWidth: 1,
-                      dashArray: [3, 3],
-                    );
-                  },
+          
+          if (_isLoading)
+            SizedBox(
+              height: 200,
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (_errorMessage.isNotEmpty)
+            SizedBox(
+              height: 200,
+              child: Center(
+                child: Text(
+                  _errorMessage,
+                  style: TextStyle(color: Colors.red),
+                  textAlign: TextAlign.center,
                 ),
-                titlesData: FlTitlesData(
-                  show: true,
-                  rightTitles: AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
+              ),
+            )
+          else if (_nutritionData.isEmpty)
+            SizedBox(
+              height: 200,
+              child: Center(
+                child: Text(
+                  'No data available',
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ),
+            )
+          else
+            SizedBox(
+              height: 200,
+              child: LineChart(
+                LineChartData(
+                  gridData: FlGridData(
+                    show: true,
+                    drawVerticalLine: true,
+                    drawHorizontalLine: true,
+                    verticalInterval: 1,
+                    horizontalInterval: _maxCalories / 4,
+                    getDrawingVerticalLine: (value) {
+                      return FlLine(
+                        color: Colors.grey[300]!,
+                        strokeWidth: 1,
+                        dashArray: [3, 3],
+                      );
+                    },
+                    getDrawingHorizontalLine: (value) {
+                      return FlLine(
+                        color: Colors.grey[300]!,
+                        strokeWidth: 1,
+                        dashArray: [3, 3],
+                      );
+                    },
                   ),
-                  topTitles: AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 30,
-                      interval: 1,
-                      getTitlesWidget: (double value, TitleMeta meta) {
-                        const style = TextStyle(
-                          color: Colors.grey,
-                          fontWeight: FontWeight.w400,
-                          fontSize: 12,
-                        );
-                        Widget text;
-                        switch (value.toInt()) {
-                          case 0:
-                            text = const Text('', style: style);
-                            break;
-                          case 1:
-                            text = const Text('Aug', style: style);
-                            break;
-                          case 2:
-                            text = const Text('Sep', style: style);
-                            break;
-                          case 3:
-                            text = const Text('Oct', style: style);
-                            break;
-                          case 4:
-                            text = const Text('Nov', style: style);
-                            break;
-                          case 5:
-                            text = const Text('', style: style);
-                            break;
-                          default:
-                            text = const Text('', style: style);
-                            break;
-                        }
-                        return SideTitleWidget(
-                          meta: meta, // pass the whole meta, not just axisSide
-                          child: text,
-                        );
-                      },
-                    ),
-                  ),
-                  leftTitles: AxisTitles(
-                    axisNameWidget: const Padding(
-                      padding: EdgeInsets.only(bottom: 180, right: 10),
-                      child: Text(
-                        'kg',
-                        style: TextStyle(color: Colors.grey, fontSize: 12),
+                  titlesData: FlTitlesData(
+                    show: true,
+                    rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 30,
+                        interval: 1,
+                        getTitlesWidget: (double value, TitleMeta meta) {
+                          const style = TextStyle(
+                            color: Colors.grey,
+                            fontWeight: FontWeight.w400,
+                            fontSize: 12,
+                          );
+                          
+                          if (value >= 0 && value < _nutritionData.length) {
+                            final dayLabel = _getDayLabels()[value.toInt()];
+                            return SideTitleWidget(
+                              meta: meta,
+                              child: Text(dayLabel, style: style),
+                            );
+                          }
+                          return const Text('', style: style);
+                        },
                       ),
                     ),
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      interval: 10,
-                      getTitlesWidget: (double value, TitleMeta meta) {
-                        const style = TextStyle(
-                          color: Colors.grey,
-                          fontWeight: FontWeight.w400,
-                          fontSize: 12,
-                        );
-                        // Show values: 40, 50, 60, 70
-                        if (value == 40 ||
-                            value == 50 ||
-                            value == 60 ||
-                            value == 70) {
-                          return Text(value.toInt().toString(), style: style);
-                        }
-                        return const Text('');
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        interval: _maxCalories / 4,
+                        getTitlesWidget: (double value, TitleMeta meta) {
+                          const style = TextStyle(
+                            color: Colors.grey,
+                            fontWeight: FontWeight.w400,
+                            fontSize: 12,
+                          );
+                          return SideTitleWidget(
+                            meta: meta,
+                            child: Text(value.toInt().toString(), style: style),
+                          );
+                        },
+                        reservedSize: 40,
+                      ),
+                    ),
+                  ),
+                  borderData: FlBorderData(
+                    show: true,
+                    border: Border.all(color: Colors.black87, width: 1),
+                  ),
+                  minX: 0,
+                  maxX: _nutritionData.length > 1 ? (_nutritionData.length - 1).toDouble() : 1,
+                  minY: 0,
+                  maxY: _maxCalories,
+                  lineBarsData: [
+                    LineChartBarData(
+                      spots: _getChartSpots(),
+                      isCurved: true,
+                      curveSmoothness: 0.4,
+                      color: const Color(0xFF8B1538),
+                      barWidth: 3,
+                      isStrokeCapRound: true,
+                      dotData: FlDotData(
+                        show: true,
+                        getDotPainter: (spot, percent, barData, index) {
+                          return FlDotCirclePainter(
+                            radius: 4,
+                            color: const Color(0xFF8B1538),
+                            strokeWidth: 0,
+                          );
+                        },
+                      ),
+                      belowBarData: BarAreaData(
+                        show: true,
+                        gradient: LinearGradient(
+                          colors: [
+                            const Color(0xFF8B1538).withOpacity(0.3),
+                            const Color(0xFF8B1538).withOpacity(0.1),
+                          ],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                        ),
+                      ),
+                    ),
+                  ],
+                  lineTouchData: LineTouchData(
+                    enabled: true,
+                    touchTooltipData: LineTouchTooltipData(
+                      getTooltipItems: (List<LineBarSpot> touchedSpots) {
+                        return touchedSpots.map((spot) {
+                          final index = spot.x.toInt();
+                          if (index >= 0 && index < _nutritionData.length) {
+                            final actualCalories = _nutritionData[index]['totalCalories'];
+                            final date = _nutritionData[index]['date'];
+                            return LineTooltipItem(
+                              '${actualCalories.toStringAsFixed(0)} cal\n${DateFormat('MMM d').format(date)}',
+                              const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            );
+                          }
+                          return LineTooltipItem('', const TextStyle());
+                        }).toList();
                       },
-                      reservedSize: 32,
+                      // tooltipBgColor: Colors.black87,
                     ),
                   ),
                 ),
-                borderData: FlBorderData(
-                  show: true,
-                  border: Border(
-                    left: BorderSide(color: Colors.black87, width: 1),
-                    bottom: BorderSide(color: Colors.black87, width: 1),
-                    right: BorderSide.none,
-                    top: BorderSide.none,
-                  ),
-                ),
-                minX: 0,
-                maxX: 5,
-                minY: 40,
-                maxY: 70,
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: const [
-                      FlSpot(0, 49), // Starting point (July)
-                      FlSpot(1, 59), // Aug
-                      FlSpot(2, 53), // Sep
-                      FlSpot(3, 65), // Oct
-                      FlSpot(4, 68), // Nov (peak)
-                      FlSpot(5, 59), // End point
-                    ],
-                    isCurved: true,
-                    curveSmoothness: 0.4,
-                    color: const Color(0xFF8B1538), // Dark red/maroon color
-                    barWidth: 3,
-                    isStrokeCapRound: true,
-                    dotData: FlDotData(
-                      show: true,
-                      getDotPainter: (spot, percent, barData, index) {
-                        return FlDotCirclePainter(
-                          radius: 4,
-                          color: const Color(0xFF8B1538),
-                          strokeWidth: 0,
-                        );
-                      },
-                    ),
-                    belowBarData: BarAreaData(show: false),
-                  ),
-                ],
-                lineTouchData: LineTouchData(enabled: false),
               ),
             ),
-          ),
         ],
       ),
     );

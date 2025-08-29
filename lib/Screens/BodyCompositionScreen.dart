@@ -5,88 +5,280 @@ import 'package:befab/components/CustomAppHeader.dart';
 import 'package:befab/components/CustomBottomNavBar.dart';
 import 'package:befab/components/HealthStatusCard.dart';
 import 'package:befab/components/StatusCard.dart';
+import 'package:befab/services/health_service.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_svg/flutter_svg.dart'; // Ensure this import is at the top
+import 'package:flutter/material.dart';
 
-class BodyCompositionScreen extends StatelessWidget {
-  final allItems = [
-    CompositionItem(
-      label: 'Lean Body Mass (76%)',
-      percentage: 76.0,
-      color: Color(0xFF8B2635),
-    ),
-    CompositionItem(
-      label: 'Body Fat',
-      percentage: 24.0,
-      color: Color.fromRGBO(134, 38, 51, 0.6),
-    ),
-    CompositionItem(
-      label: 'Body Mass (56%)',
-      percentage: 55.0,
-      color: Color.fromRGBO(134, 38, 51, 0.4),
-    ),
-    CompositionItem(
-      label: 'Body Mass (56%)',
-      percentage: 10.0,
-      color: Color.fromRGBO(134, 38, 51, 0.2),
-    ),
-  ];
+class BodyCompositionScreen extends StatefulWidget {
+  const BodyCompositionScreen({Key? key}) : super(key: key);
 
-  final List<HealthStat> healthStats = [
-    HealthStat(
-      title: "Weight",
-      value: "68.5",
-      unit: "kg",
-      lastUpdated: "4h ago",
-      secondaryLabel: "-0.12 kg from last month",
-      secondaryColor: Color(0xFF16A34A),
-    ),
-    HealthStat(
-      title: "Height",
-      value: "175",
-      unit: "cm",
-      lastUpdated: "2 mon ago",
-    ),
-    HealthStat(
-      title: "BMI",
-      value: "22.4",
-      unit: "",
-      lastUpdated: "today",
-      secondaryLabel: "Normal weight",
-      secondaryColor: Color(0xFF16A34A),
-    ),
-    HealthStat(
-      title: "Body Fat Percent",
-      value: "68.5",
-      unit: "kg",
-      lastUpdated: "today",
-      secondaryLabel: "Healthy Range",
-      secondaryColor: Color(0xFF16A34A),
-    ),
-    HealthStat(
-      title: "Lean Body Mass",
-      value: "52.1",
-      unit: "kg",
-      lastUpdated: "today",
-    ),
-    HealthStat(
-      title: "Bone Mass",
-      value: "3.2",
-      unit: "kg",
-      lastUpdated: "today",
-    ),
-    HealthStat(
-      title: "Bone Water Mass",
-      value: "37.5",
-      unit: "kg",
-      lastUpdated: "today",
-      secondaryLabel: "56% of body weight",
-      secondaryColor: Color(0xFF878686),
-    ),
-  ];
+  @override
+  _BodyCompositionScreenState createState() => _BodyCompositionScreenState();
+}
+
+class _BodyCompositionScreenState extends State<BodyCompositionScreen> {
+  final HealthService healthService = HealthService();
+  Map<String, dynamic>? healthData;
+
+  @override
+  void initState() {
+    super.initState();
+    // getData(); // Fetch initial data
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadHealthData();
+    });
+  }
+
+  Future<void> _loadHealthData() async {
+    bool isInstalled = await healthService.isHealthAppInstalled();
+    if (!isInstalled) {
+      healthService.suggestInstallHealthApp(context);
+      return;
+    }
+
+    bool authorized = await healthService.requestAuthorization();
+    debugPrint("$authorized");
+    if (!authorized) {
+      debugPrint("❌ Health permissions denied!");
+      return;
+    }
+
+    Map<String, dynamic> data = await healthService.fetchAllData(
+      from: DateTime.now().subtract(const Duration(days: 30)),
+      to: DateTime.now(),
+    );
+
+    if (!mounted) return;
+    setState(() {
+      healthData = data;
+    });
+
+    debugPrint("✅ Platform: ${healthService.getPlatform()}");
+    debugPrint(
+      "✅ Fetched health data: ${getHealthValue('HealthDataType.STEPS')}",
+    );
+  }
+
+  // Helper to get a single value safely from healthData
+  Map<String, String> simplifiedUnits = {
+    "METER": "m",
+    "KILOMETER": "km",
+    "MILE": "mi",
+    "YARD": "yd",
+    "FOOT": "ft",
+    "GRAM": "g",
+    "KILOGRAM": "kg",
+    "OUNCE": "oz",
+    "POUND": "lb",
+    "MILLIMETER_OF_MERCURY": "mmHg",
+    "INCH_OF_MERCURY": "inHg",
+    "PASCAL": "Pa",
+    "KILOPASCAL": "kPa",
+    "CELSIUS": "°C",
+    "FAHRENHEIT": "°F",
+    "KELVIN": "K",
+    "CALORIE": "kcal",
+    "KILOJOULE": "kJ",
+    "SECOND": "s",
+    "MINUTE": "min",
+    "HOUR": "h",
+    "DAY": "d",
+    "LITER": "L",
+    "MILLILITER": "mL",
+    "FLUID_OUNCE_US": "fl oz",
+    "COUNT": "",
+    "BEAT": "beat",
+    "BEAT_PER_MINUTE": "bpm",
+    "REP": "rep",
+    "PERCENTAGE": "%",
+    "SLEEP_ASLEEP": "sleep",
+    "SLEEP_IN_BED": "in bed",
+    "SLEEP_AWAKE": "awake",
+    "DISTANCE_WALKING_RUNNING": "m",
+    "DISTANCE_CYCLING": "m",
+    "ACTIVE_ENERGY_BURNED": "kcal",
+    "BASAL_ENERGY_BURNED": "kcal",
+    "BODY_MASS_INDEX": "BMI",
+    "BODY_FAT_PERCENTAGE": "%",
+    "LEAN_BODY_MASS": "kg",
+    "RESTING_HEART_RATE": "bpm",
+    "HEART_RATE": "bpm",
+    "STEP_COUNT": "",
+    "FLIGHTS_CLIMBED": "fl",
+    "WALKING_HEART_RATE": "bpm",
+    "VO2_MAX": "ml/kg/min",
+    "DISTANCE_SWIMMING": "m",
+    "SWIM_STROKE_COUNT": "stroke",
+    "WORKOUT_DURATION": "min",
+    "DURATION": "min",
+    "BODY_TEMPERATURE": "°C",
+    "BLOOD_PRESSURE_SYSTOLIC": "mmHg",
+    "BLOOD_PRESSURE_DIASTOLIC": "mmHg",
+    "BLOOD_GLUCOSE": "mg/dL",
+    "BLOOD_OXYGEN": "%",
+    "RESPIRATORY_RATE": "breaths/min",
+    "OXYGEN_SATURATION": "%",
+    "HEADACHE_SEVERITY": "",
+    "MOOD": "",
+    "STRESS_LEVEL": "",
+    "WATER": "L",
+    "CAFFEINE": "mg",
+    "ALCOHOL_CONSUMED": "g",
+    "TOBACCO_SMOKED": "cig",
+    "BODY_MASS": "kg",
+    "HEIGHT": "m",
+    "BEATS_PER_MINUTE": "bpm",
+    "PERCENT": "%",
+  };
+
+  Map<String, dynamic> getHealthValue(
+    String type, {
+    int decimalsIfDouble = 2,
+    bool convertMetersToKm = false,
+  }) {
+    if (healthData == null) return {"data": "--", "unit": ""};
+
+    final raw = healthData![type];
+    if (raw is! List || raw.isEmpty) return {"data": "--", "unit": ""};
+
+    String _resolveUnit(List list) {
+      final counts = <String, int>{};
+      for (final e in list) {
+        if (e is Map) {
+          String? u;
+          if (e['unit'] is String) {
+            u = e['unit'] as String;
+          }
+          if (u != null && u.isNotEmpty) {
+            counts[u] = (counts[u] ?? 0) + 1;
+          }
+        }
+      }
+      if (counts.isEmpty) return '';
+      return counts.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
+    }
+
+    final unitFromData = _resolveUnit(raw);
+
+    num total = 0;
+
+    for (final e in raw) {
+      if (e is! Map) continue;
+
+      final value = e['value'];
+      if (value != null) {
+        total += value.numericValue;
+      }
+    }
+
+    String outUnit = simplifiedUnits[unitFromData] ?? unitFromData;
+    if (convertMetersToKm && unitFromData == "METER") {
+      total = total / 1000;
+      outUnit = "km";
+    }
+
+    String formatted;
+    if (total % 1 == 0) {
+      formatted = total.toInt().toString();
+    } else {
+      formatted = total.toStringAsFixed(decimalsIfDouble);
+    }
+
+    return {"data": formatted, "unit": outUnit};
+  }
+
+String getAverageBodyFatCategory(double bodyFat) {
+  if (bodyFat < 18) {
+    return "Underfat";
+  } else if (bodyFat <= 30) {
+    return "Healthy range";
+  } else {
+    return "Overfat / Obese";
+  }
+}
+
+String getBmiCategory(double bmi) {
+  if (bmi < 18.5) {
+    return "Underweight";
+  } else if (bmi >= 18.5 && bmi < 25) {
+    return "Normal";
+  } else if (bmi >= 25 && bmi < 30) {
+    return "Overweight";
+  } else if (bmi >= 30 && bmi < 35) {
+    return "Obesity Class I";
+  } else if (bmi >= 35 && bmi < 40) {
+    return "Obesity Class II";
+  } else {
+    return "Obesity Class III";
+  }
+}
+
+
+
   @override
   Widget build(BuildContext context) {
+ final allItems = [
+  CompositionItem(
+    label: 'Lean Body Mass (76%)',
+    percentage: double.tryParse(getHealthValue('HealthDataType.LEAN_BODY_MASS')?['data']?.toString() ?? '0') ?? 0.0,
+    color: Color(0xFF8B2635),
+  ),
+  CompositionItem(
+    label: 'Body Fat',
+    percentage: double.tryParse(getHealthValue('HealthDataType.BODY_FAT_PERCENTAGE')?['data']?.toString() ?? '0') ?? 0.0,
+    color: Color.fromRGBO(134, 38, 51, 0.6),
+  ),
+  CompositionItem(
+    label: 'BMI',
+    percentage: double.tryParse(getHealthValue('HealthDataType.BODY_MASS_INDEX')?['data']?.toString() ?? '0') ?? 0.0,
+    color: Color.fromRGBO(134, 38, 51, 0.4),
+  ),
+  CompositionItem(
+    label: 'Weight',
+    percentage: double.tryParse(getHealthValue('HealthDataType.BODY_MASS_INDEX')?['data']?.toString() ?? '0') ?? 0.0,
+    color: Color.fromRGBO(134, 38, 51, 0.2),
+  ),
+];    final List<HealthStat> healthStats = [
+      HealthStat(
+        title: "Weight",
+        value: getHealthValue('HealthDataType.WEIGHT')['data'],
+        unit: "kg",
+        lastUpdated: "",
+        secondaryLabel: "",
+        secondaryColor: Color(0xFF16A34A),
+      ),
+      HealthStat(
+        title: "Height",
+        value: getHealthValue('HealthDataType.HEIGHT')['data'],
+        unit: getHealthValue('HealthDataType.HEIGHT')['unit'],
+        lastUpdated: "",
+      ),
+      HealthStat(
+        title: "BMI",
+        value: getHealthValue('HealthDataType.BODY_MASS_INDEX')['data'],
+        unit: "",
+        lastUpdated: "",
+        secondaryLabel: "",
+        secondaryColor: Color(0xFF16A34A),
+      ),
+      HealthStat(
+        title: "Body Fat Percent",
+        value: getHealthValue('HealthDataType.BODY_FAT_PERCENTAGE')['data'],
+        unit: "%",
+        lastUpdated: "",
+        secondaryLabel: "",
+        secondaryColor: Color(0xFF16A34A),
+      ),
+      HealthStat(
+        title: "Lean Body Mass",
+        value: getHealthValue('HealthDataType.LEAN_BODY_MASS')['data'],
+        unit: getHealthValue('HealthDataType.LEAN_BODY_MASS')['unit'],
+        lastUpdated: "",
+      ),
+    ];
     return Scaffold(
       appBar: CustomAppBar(
         leftWidget: Row(
@@ -113,18 +305,26 @@ class BodyCompositionScreen extends StatelessWidget {
           children: [
             Padding(
               padding: const EdgeInsets.all(16.0),
-              child: WeightTrackingChart(
-                title: 'Current Weight',
-                currentWeight: '68',
-                weightUnit: 'KG',
-                changeText: '-12.6 kg',
-                isWeightLoss: true,
-                chartData: const [
-                  ChartDataPoint(label: 'May 1', value: 75.0),
-                  ChartDataPoint(label: 'May 15', value: 73.5),
-                  ChartDataPoint(label: 'Jun 1', value: 71.0),
-                  ChartDataPoint(label: 'Jun 15', value: 69.5),
-                  ChartDataPoint(label: 'Today', value: 68.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Current Weight',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    '${getHealthValue('HealthDataType.WEIGHT')['data']} KG',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    '',
+                    style: TextStyle(
+                      color: Colors.green, // Use green for weight loss
+                      fontSize: 16,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -143,11 +343,13 @@ class BodyCompositionScreen extends StatelessWidget {
                       imageColor: Color(0xFFFF7D0E),
                       imageBackgroundColor: Color.fromRGBO(255, 125, 14, 0.2),
                       title: "BMI",
-                      value: "5.2",
-                      unit: "km",
-                      goalLabel: "Normal weight",
-                      progress: 5.2 / 8.0,
-                      startLabel: '18.5',
+                      value: getHealthValue('HealthDataType.BODY_MASS_INDEX')['data'],
+                      unit: "",
+                      goalLabel: "${getBmiCategory(
+  double.tryParse(getHealthValue('HealthDataType.BODY_MASS_INDEX')['data'].toString()) ?? 0.0
+)}",
+                      progress: (double.tryParse(getHealthValue('HealthDataType.BODY_MASS_INDEX')['data'].toString()) ?? 0.0) / 25,
+                      startLabel: getHealthValue('HealthDataType.BODY_MASS_INDEX')['data'],
                       endLabel: '25',
                     ),
                   ),
@@ -157,11 +359,13 @@ class BodyCompositionScreen extends StatelessWidget {
                       imageColor: Color(0xFF2563EB),
                       imageBackgroundColor: Color.fromRGBO(37, 99, 235, 0.2),
                       title: "Body Fat",
-                      value: "24%",
+                      value: "${getHealthValue('HealthDataType.BODY_FAT_PERCENTAGE')['data']}%",
                       unit: "",
-                      goalLabel: "Healthy range",
-                      progress: 12 / 15,
-                      startLabel: '14%',
+                      goalLabel: "${getAverageBodyFatCategory(
+  double.tryParse(getHealthValue('HealthDataType.BODY_FAT_PERCENTAGE')['data'].toString()) ?? 0.0
+)}",
+                      progress: (double.tryParse(getHealthValue('HealthDataType.BODY_FAT_PERCENTAGE')['data'].toString()) ?? 0.0) / 31,
+                      startLabel: '${getHealthValue('HealthDataType.BODY_FAT_PERCENTAGE')['data']}%',
                       endLabel: '31%',
                     ),
                   ),
@@ -182,24 +386,24 @@ class BodyCompositionScreen extends StatelessWidget {
               ),
             ),
             HealthStatusCard(stats: healthStats),
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Align(
-                alignment: Alignment.topLeft,
-                child: Text(
-                  "Body Composition Analysis",
-                  style: GoogleFonts.inter(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ),
+            // Padding(
+            //   padding: const EdgeInsets.all(16.0),
+            //   child: Align(
+            //     alignment: Alignment.topLeft,
+            //     child: Text(
+            //       "Body Composition Analysis",
+            //       style: GoogleFonts.inter(
+            //         fontSize: 20,
+            //         fontWeight: FontWeight.w500,
+            //       ),
+            //     ),
+            //   ),
+            // ),
 
-            BodyCompositionChart(
-              chartItems: allItems.sublist(0, 2), // only 2 shown in chart
-              legendItems: allItems, // all shown in legend
-            ),
+            // BodyCompositionChart(
+            //   chartItems: allItems.sublist(0, 2), // only 2 shown in chart
+            //   legendItems: allItems, // all shown in legend
+            // ),
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Align(
@@ -261,33 +465,33 @@ class BodyCompositionScreen extends StatelessWidget {
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(14.0),
-              child: SizedBox(
-                width: double.infinity, // Makes the button take full width
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF862633),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                  ),
-                  onPressed: () {},
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                    child: Text(
-                      'Add New Measurement',
-                      style: GoogleFonts.lexend(
-                        color: Colors.white,
-                        fontWeight:
-                            FontWeight.w600, // Optional: make it a bit bolder
-                        fontSize: 16, // Optional: specify a font size
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
+            // Padding(
+            //   padding: const EdgeInsets.all(14.0),
+            //   child: SizedBox(
+            //     width: double.infinity, // Makes the button take full width
+            //     child: ElevatedButton(
+            //       style: ElevatedButton.styleFrom(
+            //         backgroundColor: const Color(0xFF862633),
+            //         shape: RoundedRectangleBorder(
+            //           borderRadius: BorderRadius.circular(24),
+            //         ),
+            //       ),
+            //       onPressed: () {},
+            //       child: Padding(
+            //         padding: EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+            //         child: Text(
+            //           'Add New Measurement',
+            //           style: GoogleFonts.lexend(
+            //             color: Colors.white,
+            //             fontWeight:
+            //                 FontWeight.w600, // Optional: make it a bit bolder
+            //             fontSize: 16, // Optional: specify a font size
+            //           ),
+            //         ),
+            //       ),
+            //     ),
+            //   ),
+            // ),
             SizedBox(height: 36),
           ],
         ),

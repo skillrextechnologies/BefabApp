@@ -25,6 +25,7 @@ class HydrationTrackerWidget extends StatelessWidget {
   final BorderRadius? borderRadius;
   final List<BoxShadow>? boxShadow;
   final Color widgetBackgroundColor;
+  final VoidCallback? onTap;
 
   const HydrationTrackerWidget({
     Key? key,
@@ -33,6 +34,7 @@ class HydrationTrackerWidget extends StatelessWidget {
     required this.dailyGoal,
     required this.currentCups,
     required this.totalCups,
+    this.onTap,
     this.consumedUnit = 'ml',
     this.goalUnit = 'ml',
     this.cupsLabel = 'Cups',
@@ -189,61 +191,63 @@ class HydrationTrackerWidget extends StatelessWidget {
               ],
             ),
             SizedBox(height: 4,),
+           Padding(
+  padding: const EdgeInsets.all(12.0),
+  child: SizedBox(
+    width: double.infinity, // Makes the button take full width
+    child: ElevatedButton(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFF862633),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+      ),
+      onPressed: () {
+        // Add your onTap functionality here
+        onTap!();
+      },
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+        child: Text(
+          'Add Water',
+          style: GoogleFonts.lexend(
+            color: Colors.white,
+            fontWeight: FontWeight.w700, // Optional: make it a bit bolder
+            fontSize: 16, // Optional: specify a font size
+          ),
+        ),
+      ),
+    ),
+  ),
+),
             Padding(
               padding: const EdgeInsets.all(12.0),
               child: SizedBox(
                 width: double.infinity, // Makes the button take full width
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF862633),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                  ),
-                  onPressed: (){},
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                    child: Text(
-                      'Add Water',
-                      style: GoogleFonts.lexend(
-                        color: Colors.white,
-                        fontWeight:
-                            FontWeight.w700, // Optional: make it a bit bolder
-                        fontSize: 16, // Optional: specify a font size
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: SizedBox(
-                width: double.infinity, // Makes the button take full width
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFFFFFF),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    side: BorderSide(
-                      color: Color(0xFF862633)
-                    )
-                  ),
-                  onPressed: () {},
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                    child: Text(
-                      'Set Reminder',
-                      style: GoogleFonts.lexend(
-                        color: Color(0xFF862633),
-                        fontWeight:
-                            FontWeight.w700, // Optional: make it a bit bolder
-                        fontSize: 16, // Optional: specify a font size
-                      ),
-                    ),
-                  ),
-                ),
+                // child: ElevatedButton(
+                //   style: ElevatedButton.styleFrom(
+                //     backgroundColor: const Color(0xFFFFFFFF),
+                //     shape: RoundedRectangleBorder(
+                //       borderRadius: BorderRadius.circular(24),
+                //     ),
+                //     side: BorderSide(
+                //       color: Color(0xFF862633)
+                //     )
+                //   ),
+                //   onPressed: () {},
+                //   child: Padding(
+                //     padding: EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                //     child: Text(
+                //       'Set Reminder',
+                //       style: GoogleFonts.lexend(
+                //         color: Color(0xFF862633),
+                //         fontWeight:
+                //             FontWeight.w700, // Optional: make it a bit bolder
+                //         fontSize: 16, // Optional: specify a font size
+                //       ),
+                //     ),
+                //   ),
+                // ),
               ),
             ),
           ],

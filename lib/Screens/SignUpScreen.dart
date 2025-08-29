@@ -4,6 +4,11 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter/gestures.dart'; // ✅ Needed for TapGestureRecognizer
+
+// Import your two new screens
+import 'privacy_policy_screen.dart';
+import 'terms_of_agreement_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -366,6 +371,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   ),
 
                   const SizedBox(height: 16),
+                  // ✅ Updated clickable Terms and Privacy
                   Text.rich(
                     TextSpan(
                       text: 'By continuing, you agree to the ',
@@ -377,6 +383,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             color: const Color(0xFF862633),
                             fontWeight: FontWeight.w600,
                           ),
+                          recognizer: TapGestureRecognizer()
+                            ..onTap = () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const TermsOfAgreementScreen(),
+                                ),
+                              );
+                            },
                         ),
                         TextSpan(
                           text: '. Read our ',
@@ -390,6 +405,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             color: const Color(0xFF862633),
                             fontWeight: FontWeight.w600,
                           ),
+                          recognizer: TapGestureRecognizer()
+                            ..onTap = () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const PrivacyPolicyScreen(),
+                                ),
+                              );
+                            },
                         ),
                       ],
                     ),

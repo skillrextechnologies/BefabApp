@@ -8,6 +8,7 @@ import 'package:befab/Screens/SurveyScreen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_svg/flutter_svg.dart'; // Ensure this import is at the top
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
     const Color iconColor = Color(0xFF862633);
 const Color selectedTileColor = Color.fromRGBO(134, 38, 51, 0.1);
@@ -30,6 +31,9 @@ class CustomDrawer extends StatefulWidget {
 
 class _CustomDrawerState extends State<CustomDrawer> {
   int selectedIndex = 0;
+
+  final _secureStorage = FlutterSecureStorage();
+
 
 final List<Map<String, dynamic>> menuItems = [
   {
@@ -177,43 +181,52 @@ Widget? getTargetPage(String route) {
             const Spacer(),
 
             // Logout Button
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF862633),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SvgPicture.asset(
-                        'assets/images/logout.svg',
-                        width: 24,
-                        height: 24,
-                        color: Colors.white,
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Logout',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w500,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+         Padding(
+  padding: const EdgeInsets.all(12),
+  child: Align(
+    alignment: Alignment.centerLeft,
+    child: GestureDetector(
+      onTap: () async {
+        // 1️⃣ Delete token from secure storage
+        await _secureStorage.delete(key: 'token');
+
+        // 2️⃣ Navigate to /signin and remove all previous routes
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/signin',
+          (Route<dynamic> route) => false,
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF862633),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SvgPicture.asset(
+              'assets/images/logout.svg',
+              width: 24,
+              height: 24,
+              color: Colors.white,
+            ),
+            const SizedBox(width: 8),
+            const Text(
+              'Logout',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w500,
+                fontSize: 14,
               ),
             ),
           ],
+        ),
+      ),
+    ),
+  ),
+)  ],
         ),
       ),
     );
