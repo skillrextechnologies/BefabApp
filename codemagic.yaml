@@ -4,17 +4,26 @@ workflows:
     environment:
       flutter: stable
       xcode: latest
+
     scripts:
       - name: Get Flutter packages
         script: flutter pub get
 
+      - name: Clean Flutter & Pods
+        script: |
+          flutter clean
+          rm -rf ios/Pods
+          rm -rf ios/.symlinks
+          rm -rf ios/Flutter/Flutter.framework
+          rm -rf ios/Flutter/Flutter.podspec
+
       - name: Fix iOS Podfile & install pods
         script: |
           cd ios
-          # Force iOS 14.0 minimum deployment target in Podfile
+          # Force iOS 14.0 minimum deployment target
           sed -i '' 's/platform :ios.*/platform :ios, '\''14.0'\''/' Podfile || echo "platform :ios, '14.0'" >> Podfile
           
-          # Ensure post_install hook exists (needed for plugins)
+          # Ensure post_install hook exists
           if ! grep -q "post_install do" Podfile; then
             cat <<EOT >> Podfile
 
