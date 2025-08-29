@@ -1,0 +1,28 @@
+workflows:
+  ios-testflight:
+    name: iOS TestFlight
+    environment:
+      flutter: stable
+      xcode: latest
+    scripts:
+      - name: Get Flutter packages
+        script: flutter pub get
+
+      - name: Build iOS release
+        script: flutter build ipa --release --no-codesign
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+
+    publishing:
+      app_store_connect:
+        api_key: 6Z3LGS7MW7
+        issuer_id: d8183cba-9d7d-4d93-8172-cb155320eb7f
+        private_key: |
+          -----BEGIN PRIVATE KEY-----
+          MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQgPoz0QtQfA1guoR0H
+          Ap5PoHqTD8PQ13Ed1L2XumX+rpGgCgYIKoZIzj0DAQehRANCAATY6il8+qk1+1/p
+          caWhDn2xhuH+mx9QJj2+VPq1Hr0VlaE1oftlxFzXCeEnSCFHrLEcF4iVOcmwgc+u
+          Cc9ow1DT
+          -----END PRIVATE KEY-----
+        submit_to_testflight: true
