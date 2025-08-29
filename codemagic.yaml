@@ -17,28 +17,13 @@ workflows:
           rm -rf ios/Flutter/Flutter.framework
           rm -rf ios/Flutter/Flutter.podspec
 
-      - name: Fix iOS Podfile & install pods
+      - name: Reinstall CocoaPods
         script: |
           cd ios
-          # Force iOS 14.0 minimum deployment target
-          sed -i '' 's/platform :ios.*/platform :ios, '\''14.0'\''/' Podfile || echo "platform :ios, '14.0'" >> Podfile
-          
-          # Ensure post_install hook exists
-          if ! grep -q "post_install do" Podfile; then
-            cat <<EOT >> Podfile
-
-            post_install do |installer|
-              installer.pods_project.targets.each do |target|
-                target.build_configurations.each do |config|
-                  config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '14.0'
-                end
-              end
-            end
-          EOT
-          fi
-
+          pod deintegrate
           pod repo update
           pod install
+          cd ..
 
       - name: Build iOS release
         script: flutter build ipa --release --no-codesign
